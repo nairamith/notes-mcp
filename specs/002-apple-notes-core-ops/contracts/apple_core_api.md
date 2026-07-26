@@ -1,0 +1,90 @@
+# API Contract: `apple/core.py`
+
+This is a Python library API (function signatures), not a network
+protocol — the "contract" here is the public function signatures, their
+behavior, and the exceptions they raise. See [data-model.md](../data-model.md)
+for `Note`/`Folder`/`FolderListing` field definitions.
+
+## Exceptions
+
+All defined in `apple/core.py`:
+
+- `AppleNotesError(Exception)` — base class for everything below.
+- `NotFoundError(AppleNotesError)` — a referenced note, folder, or parent
+  folder does not exist.
+- `AlreadyExistsError(AppleNotesError)` — `mkdir` target name already
+  exists under the same parent.
+- `InvalidPatternError(AppleNotesError)` — `grep` was given an invalid
+  regular expression.
+- `AutomationPermissionError(AppleNotesError)` — macOS has not granted
+  Notes automation permission yet.
+- `NotImplementedYetError(AppleNotesError)` — raised by `rm`, always, in
+  this feature.
+
+## `ls(folder_path: str) -> FolderListing`
+
+Lists the immediate notes and subfolders inside `folder_path`.
+
+- **Raises** `NotFoundError` if `folder_path` does not exist.
+- **Read-only**: never changes any Notes data (FR-008).
+- Returns an empty `FolderListing` (both lists empty) for an existing,
+  empty folder — this is success, not an error.
+
+## `grep(pattern: str, folder_path: str | None = None) -> list[Note]`
+
+Searches note plaintext content using `pattern` as a Python regular
+expression. When `folder_path` is given, only notes within that folder are
+searched; when omitted, the entire account is searched.
+
+- **Raises** `InvalidPatternError` if `pattern` is not a valid regular
+  expression — checked before any Notes interaction.
+- **Raises** `NotFoundError` if `folder_path` is given and does not exist.
+- **Read-only**: never changes any Notes data (FR-008).
+- Returns an empty list when nothing matches — this is success, not an
+  error.
+
+## `mkdir(parent_path: str, name: str) -> Folder`
+
+Creates a new, empty folder named `name` directly under `parent_path`.
+
+- **Raises** `NotFoundError` if `parent_path` does not exist (FR-004; no
+  automatic creation of missing intermediate parents).
+- **Raises** `AlreadyExistsError` if a folder named `name` already exists
+  under `parent_path` (FR-003).
+- Returns the newly created `Folder`.
+
+## `mv(kind: Literal["note", "folder"], identifier: str, destination_folder_path: str, new_name: str | None = None) -> Note | Folder`
+
+Moves the note (`kind="note"`, `identifier` = the note's `id`) or folder
+(`kind="folder"`, `identifier` = the folder's `path`) into
+`destination_folder_path`. If `new_name` is given, it is renamed in the
+same call; if omitted, its current name is kept.
+
+- **Raises** `NotFoundError` if the target note/folder, or
+  `destination_folder_path`, does not exist.
+- **Raises** `AlreadyExistsError` if a folder named `new_name` (or the
+  item's current name, if not renaming) already exists directly under
+  `destination_folder_path` for a folder move (mirrors `mkdir`'s
+  duplicate-name rule — note titles, unlike folder names, are not
+  required to be unique, so this check does not apply when moving a note).
+- Returns the moved/renamed `Note` or `Folder` (reflecting its new
+  `folder_path`/`path` and, if changed, `name`).
+- Never destroys or duplicates content (FR-005).
+
+## `rm(kind: Literal["note", "folder"], identifier: str) -> NoReturn`
+
+Stub for this feature (FR-006/FR-007). **Always raises**
+`NotImplementedYetError`, regardless of whether `identifier` refers to a
+real note/folder, and never touches Notes data. Real removal behavior
+(recoverable deletion, non-empty-folder policy) is deferred to a future
+feature.
+
+## Cross-cutting guarantees (all functions)
+
+- Every call logs its function name, outcome (success/error type), and
+  duration via stdlib `logging`, per the constitution's Observability
+  principle.
+- No function ever interpolates its string arguments directly into an
+  AppleScript/JXA script source — arguments are passed via the script's
+  `argv`, eliminating script-injection risk from note/folder names
+  containing special characters (see research.md §1).
