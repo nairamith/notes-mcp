@@ -10,10 +10,12 @@ EXPECTED_TOOLS = {
     "read_note",
     "create_note",
     "update_note",
+    "move_note",
+    "remove_note",
 }
 
 
-async def test_all_five_tools_are_advertised():
+async def test_all_seven_tools_are_advertised():
     tools = await mcp.list_tools()
     names = {tool.name for tool in tools}
     assert EXPECTED_TOOLS <= names

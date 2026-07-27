@@ -1,12 +1,13 @@
-"""End-to-end integration test for all five MCP tools against real
+"""End-to-end integration test for all seven MCP tools against real
 Notes.app, called as real MCP tools over stdio (matching how
 001-mcp-server-scaffold's own tests exercise the server).
 
 Runs entirely inside a dedicated, disposable `scratch_folder` (see
-conftest.py), except for update_note's overwrite=True path, whose archived
-copy necessarily lands in the single, fixed, top-level "archive" folder
-(by design, spec Assumptions) — that one note is cleaned up explicitly via
-delete_note_by_id, never the scratch folder's own teardown.
+conftest.py), except for update_note's overwrite=True path and
+remove_note, whose archived copies necessarily land in the single, fixed,
+top-level "archive" folder (by design, spec Assumptions) — those notes
+are cleaned up explicitly via delete_note_by_id, never the scratch
+folder's own teardown.
 """
 
 import sys
@@ -23,7 +24,7 @@ SERVER_PARAMS = StdioServerParameters(
 )
 
 
-async def test_all_five_tools_end_to_end(scratch_folder, delete_note_by_id):
+async def test_all_seven_tools_end_to_end(scratch_folder, seed_subfolder, delete_note_by_id):
     async with stdio_client(SERVER_PARAMS) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
@@ -72,8 +73,28 @@ async def test_all_five_tools_end_to_end(scratch_folder, delete_note_by_id):
 
                 old_content = await session.call_tool("read_note", {"note_id": note_id})
                 assert old_content.structuredContent["result"] == "hello\nworld"
+
+                seed_subfolder(scratch_folder, "moved-here")
+                dest_path = f"{scratch_folder}/moved-here"
+                moved = await session.call_tool(
+                    "move_note",
+                    {"note_id": new_note_id, "destination_folder_path": dest_path, "new_name": "integration-note-moved"},
+                )
+                assert not moved.isError
+                assert moved.structuredContent["folder_path"] == dest_path
+                assert moved.structuredContent["name"] == "integration-note-moved"
+
+                removed = await session.call_tool("remove_note", {"note_id": new_note_id})
+                assert not removed.isError
+                assert removed.structuredContent["folder_path"] == "archive"
+
+                archived_after_remove = await session.call_tool("list_folder_contents", {"folder_path": "archive"})
+                archived_names_after_remove = [n["name"] for n in archived_after_remove.structuredContent["notes"]]
+                assert "integration-note-moved" in archived_names_after_remove
             finally:
-                # The archived copy (the original "integration-note", now
-                # under "archive") is the only note this test leaves behind
-                # outside scratch_folder's own recursive teardown.
+                # The two archived copies (the original "integration-note"
+                # from update_note's overwrite, and "integration-note-moved"
+                # from remove_note) are the only notes this test leaves
+                # behind outside scratch_folder's own recursive teardown.
                 delete_note_by_id(note_id)
+                delete_note_by_id(new_note_id)
