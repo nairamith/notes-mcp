@@ -32,7 +32,7 @@ def _fake_proc(returncode=0, stdout="", stderr=""):
 class TestRunJxaClassification:
     def test_successful_json_response(self):
         with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=json.dumps({"ok": True, "result": {"x": 1}}))):
-            assert core._run_jxa({"op": "noop"}) == {"x": 1}
+            assert core._run_jxa({"op": "ls", "folder_path": "x"}) == {"x": 1}
 
     def test_permission_denied_raises_automation_permission_error(self):
         with patch.object(
@@ -41,24 +41,24 @@ class TestRunJxaClassification:
             return_value=_fake_proc(returncode=1, stderr="execution error: Not authorised (-1743)"),
         ):
             with pytest.raises(AutomationPermissionError):
-                core._run_jxa({"op": "noop"})
+                core._run_jxa({"op": "ls", "folder_path": "x"})
 
     def test_generic_osascript_failure_raises_apple_notes_error(self):
         with patch.object(core.subprocess, "run", return_value=_fake_proc(returncode=1, stderr="some other failure")):
             with pytest.raises(core.AppleNotesError):
-                core._run_jxa({"op": "noop"})
+                core._run_jxa({"op": "ls", "folder_path": "x"})
 
     def test_error_type_from_payload_maps_to_correct_exception(self):
         payload = json.dumps({"ok": False, "error_type": "NotFoundError", "message": "nope"})
         with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=payload)):
             with pytest.raises(NotFoundError, match="nope"):
-                core._run_jxa({"op": "noop"})
+                core._run_jxa({"op": "ls", "folder_path": "x"})
 
     def test_unknown_error_type_falls_back_to_base_exception(self):
         payload = json.dumps({"ok": False, "error_type": "SomethingWeNeverDefined", "message": "?"})
         with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=payload)):
             with pytest.raises(core.AppleNotesError):
-                core._run_jxa({"op": "noop"})
+                core._run_jxa({"op": "ls", "folder_path": "x"})
 
 
 class TestLsUnit:
