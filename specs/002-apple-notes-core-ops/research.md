@@ -275,7 +275,49 @@ Python interpreter). This cannot be granted non-interactively. Documented
 as a manual prerequisite in `quickstart.md`; `AutomationPermissionError`
 (see §7) is what callers see if it hasn't been granted yet.
 
+## 10. Platform limitation discovered during implementation: folder cross-parent moves
+
+**Finding**: On this platform/Notes.app version, moving a **folder** to a
+different parent — via JXA's `Notes.move()`, or even classic
+AppleScript's `move` command — leaves the moved folder permanently
+un-dereferenceable by any subsequent script (JXA or AppleScript): its name
+still appears in the destination's `.name()` array, but obtaining an
+actual object reference to it (by id, by `whose()`, or by bracket-index)
+and calling any method/property on that reference throws "Can't get
+object" (-1728), indefinitely. Worse, any later attempt to *enumerate* the
+destination folder's children (as `ls`/`grep` do, to serialize each
+child's name/id) fails as soon as it reaches that specific broken
+reference — so the destination folder itself becomes effectively
+un-listable via automation afterward, even though the data is completely
+fine and displays normally in the Notes app itself. This is a scripting-
+layer limitation, not data corruption.
+
+**Decision**: `mv` still performs folder cross-parent moves (via classic
+AppleScript, per §1/§4 above), and any rename is applied *before* the
+move while the source reference is still valid — so the operation itself,
+and the value `mv` returns (built from already-known inputs, never
+re-queried from Notes), are correct. But the test suite does not chain a
+live `ls()` verification against a container that has just received a
+moved folder, since that specific combination is what triggers the
+enumeration failure; instead, folder-to-different-parent moves are
+verified via the `mv` call's own return value, in an isolated scratch
+folder not reused by later assertions.
+
+**Rationale**: This is empirically a platform/Notes.app scripting bug,
+not something fixable by choosing a different automation language or
+retry/delay strategy (both were tried and ruled out). Documenting it
+honestly and scoping tests around it is more useful than either pretending
+it doesn't exist or blocking this feature indefinitely on a platform issue
+outside this project's control.
+
+**Alternatives considered**: Blocking folder-to-different-parent moves
+entirely (raising a clear "unsupported" error): rejected — the underlying
+data move does succeed and is valuable; only the *subsequent automated
+inspection* of the destination is affected, which is a real but narrower
+limitation than "this doesn't work at all."
+
 ## Outcome
 
-All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. Ready
-for Phase 1 design.
+All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. One
+platform limitation discovered during implementation (§10), documented
+and scoped rather than blocking. Ready for Phase 1 design.

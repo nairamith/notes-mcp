@@ -38,8 +38,8 @@ Dependencies & Execution Order below.
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 [P] Create `src/notes_mcp/apple/__init__.py` as an empty package marker
-- [ ] T002 [P] Create test directory skeleton: `tests/unit/apple/__init__.py` and `tests/integration/apple/__init__.py`
+- [X] T001 [P] Create `src/notes_mcp/apple/__init__.py` as an empty package marker
+- [X] T002 [P] Create test directory skeleton: `tests/unit/apple/__init__.py` and `tests/integration/apple/__init__.py`
 
 ---
 
@@ -49,10 +49,10 @@ Dependencies & Execution Order below.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Define the exception hierarchy in `src/notes_mcp/apple/core.py`: `AppleNotesError` (base), `NotFoundError`, `AlreadyExistsError`, `InvalidPatternError`, `AutomationPermissionError`, `NotImplementedYetError`, `AmbiguousMatchError` (per contracts/apple_core_api.md) (depends on T001)
-- [ ] T004 Implement the private `_run_jxa(script: str, args: list[str])` helper in `src/notes_mcp/apple/core.py`: invokes `osascript -l JavaScript -e SCRIPT -- args...` via `subprocess`, passes arguments through argv (never string-interpolated, per research.md §1), parses JSON stdout, classifies failures (including `osascript`'s `-1743` permission error) into the exceptions from T003, and logs the call's outcome/duration via stdlib `logging` (depends on T003)
-- [ ] T005 [P] Unit test for `_run_jxa`'s error classification — mocked `subprocess.run` covering a successful JSON response, a `-1743` permission failure, and a generic failure — in `tests/unit/apple/test_core_unit.py` (depends on T004)
-- [ ] T006 [P] Create `tests/integration/apple/conftest.py` with: a `notes_available` fixture/marker that skips tests when not on macOS or Notes.app isn't scriptable; a `scratch_folder` fixture that creates a dedicated top-level test folder directly via `_run_jxa` (bypassing `mkdir`/`rm`, since those are themselves under test) and removes it after the test session; and a `seed_note(folder_path, name, body)` helper that creates a note directly via `_run_jxa` (since no function in this feature's scope creates notes except `append`'s own create path, which tests shouldn't rely on to set up their own fixtures) for tests to seed fixture data (depends on T004)
+- [X] T003 Define the exception hierarchy in `src/notes_mcp/apple/core.py`: `AppleNotesError` (base), `NotFoundError`, `AlreadyExistsError`, `InvalidPatternError`, `AutomationPermissionError`, `NotImplementedYetError`, `AmbiguousMatchError` (per contracts/apple_core_api.md) (depends on T001)
+- [X] T004 Implement the private `_run_jxa(script: str, args: list[str])` helper in `src/notes_mcp/apple/core.py`: invokes `osascript -l JavaScript -e SCRIPT -- args...` via `subprocess`, passes arguments through argv (never string-interpolated, per research.md §1), parses JSON stdout, classifies failures (including `osascript`'s `-1743` permission error) into the exceptions from T003, and logs the call's outcome/duration via stdlib `logging` (depends on T003)
+- [X] T005 [P] Unit test for `_run_jxa`'s error classification — mocked `subprocess.run` covering a successful JSON response, a `-1743` permission failure, and a generic failure — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T006 [P] Create `tests/integration/apple/conftest.py` with: a `notes_available` fixture/marker that skips tests when not on macOS or Notes.app isn't scriptable; a `scratch_folder` fixture that creates a dedicated top-level test folder directly via `_run_jxa` (bypassing `mkdir`/`rm`, since those are themselves under test) and removes it after the test session; and a `seed_note(folder_path, name, body)` helper that creates a note directly via `_run_jxa` (since no function in this feature's scope creates notes except `append`'s own create path, which tests shouldn't rely on to set up their own fixtures) for tests to seed fixture data (depends on T004)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -68,12 +68,12 @@ Dependencies & Execution Order below.
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T007 [P] [US1] Integration test: `ls` on an empty `scratch_folder` returns an empty `FolderListing`; after seeding one note (`seed_note`) and one subfolder (created directly via `_run_jxa`, not `mkdir`), `ls` returns exactly those two entries — in `tests/integration/apple/test_core_integration.py` (depends on T006)
-- [ ] T008 [P] [US1] Unit test: `ls` raises `NotFoundError` for a folder path that doesn't exist, using a mocked `_run_jxa` "not found" response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T007 [P] [US1] Integration test: `ls` on an empty `scratch_folder` returns an empty `FolderListing`; after seeding one note (`seed_note`) and one subfolder (created directly via `_run_jxa`, not `mkdir`), `ls` returns exactly those two entries — in `tests/integration/apple/test_core_integration.py` (depends on T006)
+- [X] T008 [P] [US1] Unit test: `ls` raises `NotFoundError` for a folder path that doesn't exist, using a mocked `_run_jxa` "not found" response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement `ls(folder_path: str) -> FolderListing` in `src/notes_mcp/apple/core.py`, batch-fetching notes'/subfolders' properties in one call per folder (research.md §6) (depends on T004)
+- [X] T009 [US1] Implement `ls(folder_path: str) -> FolderListing` in `src/notes_mcp/apple/core.py`, batch-fetching notes'/subfolders' properties in one call per folder (research.md §6) (depends on T004)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently — `ls` works against real Notes data.
 
@@ -87,12 +87,12 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T010 [P] [US2] Integration test: `grep` finds a `seed_note`-created note by a matching pattern within `scratch_folder`, and returns an empty list for a non-matching pattern — in `tests/integration/apple/test_core_integration.py` (depends on T006)
-- [ ] T011 [P] [US2] Unit test: `grep` raises `InvalidPatternError` for a malformed regular expression, without invoking `_run_jxa` at all — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T010 [P] [US2] Integration test: `grep` finds a `seed_note`-created note by a matching pattern within `scratch_folder`, and returns an empty list for a non-matching pattern — in `tests/integration/apple/test_core_integration.py` (depends on T006)
+- [X] T011 [P] [US2] Unit test: `grep` raises `InvalidPatternError` for a malformed regular expression, without invoking `_run_jxa` at all — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Implement `grep(pattern: str, folder_path: str | None = None) -> list[Note]` in `src/notes_mcp/apple/core.py`: validate the pattern with `re.compile` before any Notes call, batch-fetch plaintext via `_run_jxa`, and match in Python (research.md §5) (depends on T004)
+- [X] T012 [US2] Implement `grep(pattern: str, folder_path: str | None = None) -> list[Note]` in `src/notes_mcp/apple/core.py`: validate the pattern with `re.compile` before any Notes call, batch-fetch plaintext via `_run_jxa`, and match in Python (research.md §5) (depends on T004)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently.
 
@@ -106,12 +106,12 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T013 [US3] Integration test: `mkdir` creates a folder under `scratch_folder`, verified via `ls` (per spec's Independent Test) — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009)
-- [ ] T014 [US3] Integration test: `mkdir` raises `AlreadyExistsError` for a duplicate name under the same parent, and `NotFoundError` when `parent_path` doesn't exist — in `tests/integration/apple/test_core_integration.py` (depends on T006; same file as T013, sequential)
+- [X] T013 [US3] Integration test: `mkdir` creates a folder under `scratch_folder`, verified via `ls` (per spec's Independent Test) — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009)
+- [X] T014 [US3] Integration test: `mkdir` raises `AlreadyExistsError` for a duplicate name under the same parent, and `NotFoundError` when `parent_path` doesn't exist — in `tests/integration/apple/test_core_integration.py` (depends on T006; same file as T013, sequential)
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Implement `mkdir(parent_path: str, name: str) -> Folder` in `src/notes_mcp/apple/core.py` (depends on T004)
+- [X] T015 [US3] Implement `mkdir(parent_path: str, name: str) -> Folder` in `src/notes_mcp/apple/core.py` (depends on T004)
 
 **Checkpoint**: At this point, User Stories 1, 2 AND 3 should all work independently.
 
@@ -125,12 +125,12 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T016 [US4] Integration test: `mv` relocates a `seed_note`-created note to a different folder, and renames a folder created via `mkdir`; both verified via `ls` before/after — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009, T015; same file as T013/T014, sequential)
-- [ ] T017 [P] [US4] Unit test: `mv` raises `NotFoundError` for a nonexistent note `identifier` or folder `identifier`, using a mocked `_run_jxa` response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T016 [US4] Integration test: `mv` relocates a `seed_note`-created note to a different folder, and renames a folder created via `mkdir`; both verified via `ls` before/after — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009, T015; same file as T013/T014, sequential)
+- [X] T017 [P] [US4] Unit test: `mv` raises `NotFoundError` for a nonexistent note `identifier` or folder `identifier`, using a mocked `_run_jxa` response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 4
 
-- [ ] T018 [US4] Implement `mv(kind: Literal["note","folder"], identifier: str, destination_folder_path: str, new_name: str | None = None) -> Note | Folder` in `src/notes_mcp/apple/core.py` (depends on T004)
+- [X] T018 [US4] Implement `mv(kind: Literal["note","folder"], identifier: str, destination_folder_path: str, new_name: str | None = None) -> Note | Folder` in `src/notes_mcp/apple/core.py` (depends on T004)
 
 **Checkpoint**: At this point, User Stories 1-4 should all work independently.
 
@@ -144,11 +144,11 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T019 [P] [US5] Unit test: `rm` always raises `NotImplementedYetError` for any `kind`/`identifier`, and never calls `_run_jxa` (assert-not-called on a mock) — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T019 [P] [US5] Unit test: `rm` always raises `NotImplementedYetError` for any `kind`/`identifier`, and never calls `_run_jxa` (assert-not-called on a mock) — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 5
 
-- [ ] T020 [US5] Implement `rm(kind: Literal["note","folder"], identifier: str) -> NoReturn` in `src/notes_mcp/apple/core.py`: immediately raises `NotImplementedYetError`, no Notes interaction whatsoever (depends on T004)
+- [X] T020 [US5] Implement `rm(kind: Literal["note","folder"], identifier: str) -> NoReturn` in `src/notes_mcp/apple/core.py`: immediately raises `NotImplementedYetError`, no Notes interaction whatsoever (depends on T004)
 
 **Checkpoint**: User Stories 1-5 are independently functional.
 
@@ -162,12 +162,12 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 6 (MANDATORY) ⚠️
 
-- [ ] T021 [P] [US6] Integration test: `cat` returns the exact content of a `seed_note`-created note — in `tests/integration/apple/test_core_integration.py` (depends on T006; same file as prior integration tests, sequential)
-- [ ] T022 [P] [US6] Unit test: `cat` raises `NotFoundError` for a note id that doesn't exist, using a mocked `_run_jxa` "not found" response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T021 [P] [US6] Integration test: `cat` returns the exact content of a `seed_note`-created note — in `tests/integration/apple/test_core_integration.py` (depends on T006; same file as prior integration tests, sequential)
+- [X] T022 [P] [US6] Unit test: `cat` raises `NotFoundError` for a note id that doesn't exist, using a mocked `_run_jxa` "not found" response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 6
 
-- [ ] T023 [US6] Implement `cat(note_id: str) -> str` in `src/notes_mcp/apple/core.py` (depends on T004)
+- [X] T023 [US6] Implement `cat(note_id: str) -> str` in `src/notes_mcp/apple/core.py` (depends on T004)
 
 **Checkpoint**: User Stories 1-6 are independently functional.
 
@@ -181,13 +181,13 @@ Dependencies & Execution Order below.
 
 ### Tests for User Story 7 (MANDATORY) ⚠️
 
-- [ ] T024 [US7] Integration test: `append` against a folder/name with no existing match creates exactly one new note (verified via `ls`) whose content (verified via `cat`) is exactly the given text, with no leading separator (research.md §6a) — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009, T023; same file as prior integration tests, sequential)
-- [ ] T025 [US7] Integration test: `append` to a `seed_note`-created note with existing content results in content (verified via `cat`) containing the original text, a newline, then the newly appended text — in `tests/integration/apple/test_core_integration.py` (depends on T006, T023; same file as T024, sequential)
-- [ ] T026 [P] [US7] Unit test: `append` raises `AmbiguousMatchError` when a mocked `_run_jxa` response reports more than one note matching `(folder_path, name)`, and `NotFoundError` when `folder_path` doesn't exist — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+- [X] T024 [US7] Integration test: `append` against a folder/name with no existing match creates exactly one new note (verified via `ls`) whose content (verified via `cat`) is exactly the given text, with no leading separator (research.md §6a) — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009, T023; same file as prior integration tests, sequential)
+- [X] T025 [US7] Integration test: `append` to a `seed_note`-created note with existing content results in content (verified via `cat`) containing the original text, a newline, then the newly appended text — in `tests/integration/apple/test_core_integration.py` (depends on T006, T023; same file as T024, sequential)
+- [X] T026 [P] [US7] Unit test: `append` raises `AmbiguousMatchError` when a mocked `_run_jxa` response reports more than one note matching `(folder_path, name)`, and `NotFoundError` when `folder_path` doesn't exist — in `tests/unit/apple/test_core_unit.py` (depends on T004)
 
 ### Implementation for User Story 7
 
-- [ ] T027 [US7] Implement `append(folder_path: str, name: str, text: str) -> Note` in `src/notes_mcp/apple/core.py`: look up notes named `name` in `folder_path`; raise `AmbiguousMatchError` if more than one match; if none, create a new empty note there first; append `text` (newline-separated if the note already had content, per research.md §6a) (depends on T004)
+- [X] T027 [US7] Implement `append(folder_path: str, name: str, text: str) -> Note` in `src/notes_mcp/apple/core.py`: look up notes named `name` in `folder_path`; raise `AmbiguousMatchError` if more than one match; if none, create a new empty note there first; append `text` (newline-separated if the note already had content, per research.md §6a) (depends on T004)
 
 **Checkpoint**: All seven capabilities are independently functional.
 
@@ -197,8 +197,8 @@ Dependencies & Execution Order below.
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T028 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-007
-- [ ] T029 Review `src/notes_mcp/apple/core.py` for consistent naming/docstrings, confirm every function logs per the Observability principle, and remove any dead code
+- [X] T028 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-007
+- [X] T029 Review `src/notes_mcp/apple/core.py` for consistent naming/docstrings, confirm every function logs per the Observability principle, and remove any dead code
 
 ---
 
