@@ -134,10 +134,9 @@ type unambiguous.
 **Decision**: `grep(pattern, folder_path=None)` matches `pattern` as a
 Python regular expression (`re` module) against each note's plaintext
 content. When `folder_path` is omitted, it searches every note in the
-account; when given, it searches only that folder's contents. Matching
-happens in Python, after fetching note plaintext via JXA — JXA/AppleScript
-has no native regex engine, so there is no benefit to attempting the match
-inside the script itself.
+account; when given, it searches only that folder's contents. All notes
+in scope have their plaintext fetched via JXA and matching happens in
+Python, not inside the script.
 
 **Rationale**: The spec's FR-002 doesn't scope `grep` to a single folder
 the way FR-001 scopes `ls`, so whole-account search is the more useful
@@ -146,10 +145,35 @@ behave); an optional `folder_path` still allows narrowing when wanted. An
 invalid pattern is rejected with a clear error (`InvalidPatternError`)
 before any Notes interaction is attempted, per FR-002.
 
-**Alternatives considered**: Matching only within a single mandatory
-folder: rejected — no clear default folder exists to require, and it would
-make "search everything" require the caller to already know the full
-folder tree.
+Matching stays in Python for a correctness reason, not a capability one:
+JXA is full JavaScript, so it does have a native `RegExp` engine (unlike
+classic AppleScript, which has none) — but Python's `re` and JavaScript's
+`RegExp` are different regex dialects (named-group syntax, lookbehind
+support, `\Z`, some Unicode class handling, etc. all differ). The contract
+promises `pattern` is evaluated as a **Python** regular expression
+(contracts/apple_core_api.md); evaluating it in JavaScript instead would
+silently change that for any pattern that leans on a Python-specific
+construct, with no test to catch the drift. Re-implementing Python-
+compatible regex semantics in JavaScript isn't reasonable, so the tradeoff
+is: transfer each in-scope note's plaintext to Python and match there,
+which keeps the documented contract exactly true.
+
+**Alternatives considered**:
+- Matching only within a single mandatory folder: rejected — no clear
+  default folder exists to require, and it would make "search everything"
+  require the caller to already know the full folder tree.
+- Evaluating `pattern` inside the JXA script (via JavaScript's `RegExp`)
+  to avoid transferring non-matching notes' plaintext: rejected — would
+  silently redefine `pattern`'s dialect from Python regex to JavaScript
+  regex, breaking the documented contract for edge-case patterns. Also
+  unnecessary at the feature's stated scale: personal-scale collections
+  (a few hundred notes) meet SC-002's 2-second target with room to spare
+  as measured in practice. If a real performance need emerges at larger
+  scale, a safe first pass would be a plain-substring pre-filter in JS
+  (skip transferring notes that can't possibly match a literal substring
+  extracted from `pattern`), falling back to Python's `re` for the actual
+  evaluation — not implemented now since there's no demonstrated need
+  (Principle I, YAGNI).
 
 ## 6. Performance: batching over per-item round trips
 
