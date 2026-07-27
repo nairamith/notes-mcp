@@ -218,15 +218,18 @@ def mkdir(parent_path: str, name: str) -> Folder:
 
     Args:
         parent_path: `/`-delimited path to the existing parent folder.
+            An empty string creates a new top-level folder at the account
+            root instead of nesting it under an existing parent.
         name: Name for the new folder.
 
     Returns:
         The newly created Folder.
 
     Raises:
-        NotFoundError: `parent_path` does not exist.
+        NotFoundError: `parent_path` is non-empty and does not exist.
         AlreadyExistsError: A folder named `name` already exists under
-            `parent_path`.
+            `parent_path` (or, for an empty `parent_path`, at the account
+            root).
     """
     result = _run_jxa({"op": "mkdir", "parent_path": parent_path, "name": name})
     return Folder(**result)

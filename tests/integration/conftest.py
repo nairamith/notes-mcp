@@ -66,6 +66,18 @@ function run(argv) {
 }
 """
 
+_DELETE_NOTE_BY_ID = """
+function run(argv) {
+  var Notes = Application("Notes");
+  var noteId = argv[0];
+  try {
+    var note = Notes.notes.byId(noteId);
+    Notes.delete(note);
+  } catch (e) {}
+  return "ok";
+}
+"""
+
 _SEED_SUBFOLDER = """
 function run(argv) {
   var Notes = Application("Notes");
@@ -147,6 +159,21 @@ def seed_note():
         return json.loads(_run_test_jxa(_SEED_NOTE, [folder_path, name, body]))
 
     return _seed
+
+
+@pytest.fixture
+def delete_note_by_id():
+    """Factory fixture: delete_note_by_id(note_id) removes exactly that note,
+    bypassing the (not-yet-implemented) rm tool. Used to clean up a note
+    created in a persistent, non-scratch location (e.g. the top-level
+    "archive" folder update_note's overwrite mode writes to), never a
+    substitute for scratch_folder's own recursive teardown.
+    """
+
+    def _delete(note_id: str) -> None:
+        _run_test_jxa(_DELETE_NOTE_BY_ID, [note_id])
+
+    return _delete
 
 
 @pytest.fixture

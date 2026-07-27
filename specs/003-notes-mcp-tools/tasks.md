@@ -43,8 +43,8 @@ of the others and can be worked on in parallel.
 
 **Purpose**: Project initialization and shared test infrastructure
 
-- [ ] T001 [P] Move `tests/integration/apple/conftest.py` to `tests/integration/conftest.py` (content unchanged) so its `notes_available`/`skip_without_notes`/`scratch_folder`/`seed_note`/`seed_subfolder` fixtures are shared by both `tests/integration/apple/` and the new `tests/integration/tools/` (research.md §7)
-- [ ] T002 [P] Create empty directories `tests/unit/tools/` and `tests/integration/tools/` (no `__init__.py`, matching this project's existing pytest import-mode convention)
+- [X] T001 [P] Move `tests/integration/apple/conftest.py` to `tests/integration/conftest.py` (content unchanged) so its `notes_available`/`skip_without_notes`/`scratch_folder`/`seed_note`/`seed_subfolder` fixtures are shared by both `tests/integration/apple/` and the new `tests/integration/tools/` (research.md §7)
+- [X] T002 [P] Create empty directories `tests/unit/tools/` and `tests/integration/tools/` (no `__init__.py`, matching this project's existing pytest import-mode convention)
 
 ---
 
@@ -54,9 +54,9 @@ of the others and can be worked on in parallel.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Remove the `list_folders` import and its `mcp.add_tool(list_folders)` registration from `src/notes_mcp/server.py` (depends on T001, T002)
-- [ ] T004 [P] Delete `src/notes_mcp/tools/list_folders.py` (the retired placeholder tool and its stub `Folder` model)
-- [ ] T005 [P] Delete `tests/contract/test_list_folders_contract.py` and `tests/unit/test_list_folders.py` (dedicated tests for the retired tool)
+- [X] T003 Remove the `list_folders` import and its `mcp.add_tool(list_folders)` registration from `src/notes_mcp/server.py` (depends on T001, T002)
+- [X] T004 [P] Delete `src/notes_mcp/tools/list_folders.py` (the retired placeholder tool and its stub `Folder` model)
+- [X] T005 [P] Delete `tests/contract/test_list_folders_contract.py` and `tests/unit/test_list_folders.py` (dedicated tests for the retired tool)
 
 **Checkpoint**: Foundation ready — `server.py` has zero tool registrations, the old stub and its tests are gone, shared test fixtures are in place for user story work to begin
 
@@ -72,13 +72,13 @@ of the others and can be worked on in parallel.
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US1] Contract test: `list_folder_contents` is registered with input schema `{folder_path: string}` and its output schema matches an unwrapped `FolderListing` (`folders`/`notes` arrays — research.md §4) — in `tests/contract/test_list_folder_contents_contract.py` (depends on T003)
-- [ ] T007 [P] [US1] Unit test: mocking `apple.core.ls`, verify the tool returns the `FolderListing` as-is and that a `NotFoundError` raised by `ls` propagates (for the SDK to convert into an `isError` result) — in `tests/unit/tools/test_list_folder_contents_unit.py` (depends on T002)
+- [X] T006 [P] [US1] Contract test: `list_folder_contents` is registered with input schema `{folder_path: string}` and its output schema matches an unwrapped `FolderListing` (`folders`/`notes` arrays — research.md §4) — in `tests/contract/test_list_folder_contents_contract.py` (depends on T003)
+- [X] T007 [P] [US1] Unit test: mocking `apple.core.ls`, verify the tool returns the `FolderListing` as-is and that a `NotFoundError` raised by `ls` propagates (for the SDK to convert into an `isError` result) — in `tests/unit/tools/test_list_folder_contents_unit.py` (depends on T002)
 
 ### Implementation for User Story 1
 
-- [ ] T008 [P] [US1] Implement `list_folder_contents(folder_path: str) -> FolderListing` in `src/notes_mcp/tools/list_folder_contents.py`, calling `apple.core.ls` directly with no try/except (research.md §2)
-- [ ] T009 [US1] Register `list_folder_contents` in `src/notes_mcp/server.py` (depends on T003, T008)
+- [X] T008 [P] [US1] Implement `list_folder_contents(folder_path: str) -> FolderListing` in `src/notes_mcp/tools/list_folder_contents.py`, calling `apple.core.ls` directly with no try/except (research.md §2)
+- [X] T009 [US1] Register `list_folder_contents` in `src/notes_mcp/server.py` (depends on T003, T008)
 
 **Checkpoint**: User Story 1 is fully functional and testable independently — `list_folder_contents` works against real Notes data.
 
@@ -92,13 +92,13 @@ of the others and can be worked on in parallel.
 
 ### Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T010 [P] [US2] Contract test: `search_notes` is registered with input schema `pattern` (required) + `folder_path` (optional, default null) and output wrapped as `{"result": [...]}` (research.md §4) — in `tests/contract/test_search_notes_contract.py` (depends on T003)
-- [ ] T011 [P] [US2] Unit test: mocking `apple.core.grep`, verify pass-through of results and that `InvalidPatternError`/`NotFoundError` propagate — in `tests/unit/tools/test_search_notes_unit.py` (depends on T002)
+- [X] T010 [P] [US2] Contract test: `search_notes` is registered with input schema `pattern` (required) + `folder_path` (optional, default null) and output wrapped as `{"result": [...]}` (research.md §4) — in `tests/contract/test_search_notes_contract.py` (depends on T003)
+- [X] T011 [P] [US2] Unit test: mocking `apple.core.grep`, verify pass-through of results and that `InvalidPatternError`/`NotFoundError` propagate — in `tests/unit/tools/test_search_notes_unit.py` (depends on T002)
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Implement `search_notes(pattern: str, folder_path: str | None = None) -> list[Note]` in `src/notes_mcp/tools/search_notes.py`, calling `apple.core.grep` directly
-- [ ] T013 [US2] Register `search_notes` in `src/notes_mcp/server.py` (depends on T009, T012 — same file as T009, sequential)
+- [X] T012 [P] [US2] Implement `search_notes(pattern: str, folder_path: str | None = None) -> list[Note]` in `src/notes_mcp/tools/search_notes.py`, calling `apple.core.grep` directly
+- [X] T013 [US2] Register `search_notes` in `src/notes_mcp/server.py` (depends on T009, T012 — same file as T009, sequential)
 
 **Checkpoint**: User Stories 1 AND 2 both work independently.
 
@@ -112,13 +112,13 @@ of the others and can be worked on in parallel.
 
 ### Tests for User Story 3 (MANDATORY) ⚠️
 
-- [ ] T014 [P] [US3] Contract test: `read_note` is registered with input `{note_id: string}` and output wrapped as `{"result": "<string>"}` — in `tests/contract/test_read_note_contract.py` (depends on T003)
-- [ ] T015 [P] [US3] Unit test: mocking `apple.core.cat`, verify pass-through and that `NotFoundError` propagates — in `tests/unit/tools/test_read_note_unit.py` (depends on T002)
+- [X] T014 [P] [US3] Contract test: `read_note` is registered with input `{note_id: string}` and output wrapped as `{"result": "<string>"}` — in `tests/contract/test_read_note_contract.py` (depends on T003)
+- [X] T015 [P] [US3] Unit test: mocking `apple.core.cat`, verify pass-through and that `NotFoundError` propagates — in `tests/unit/tools/test_read_note_unit.py` (depends on T002)
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Implement `read_note(note_id: str) -> str` in `src/notes_mcp/tools/read_note.py`, calling `apple.core.cat` directly
-- [ ] T017 [US3] Register `read_note` in `src/notes_mcp/server.py` (depends on T013, T016 — same file as T013, sequential)
+- [X] T016 [P] [US3] Implement `read_note(note_id: str) -> str` in `src/notes_mcp/tools/read_note.py`, calling `apple.core.cat` directly
+- [X] T017 [US3] Register `read_note` in `src/notes_mcp/server.py` (depends on T013, T016 — same file as T013, sequential)
 
 **Checkpoint**: User Stories 1, 2 AND 3 all work independently.
 
@@ -132,13 +132,13 @@ of the others and can be worked on in parallel.
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
-- [ ] T018 [P] [US4] Contract test: `create_note` is registered with input `{folder_path, name, content}` (all required strings) and output unwrapped as a `Note` object — in `tests/contract/test_create_note_contract.py` (depends on T003)
-- [ ] T019 [P] [US4] Unit test: mocking `apple.core.append`, verify pass-through of the created `Note` and that `NotFoundError`/`AmbiguousMatchError` propagate — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
+- [X] T018 [P] [US4] Contract test: `create_note` is registered with input `{folder_path, name, content}` (all required strings) and output unwrapped as a `Note` object — in `tests/contract/test_create_note_contract.py` (depends on T003)
+- [X] T019 [P] [US4] Unit test: mocking `apple.core.append`, verify pass-through of the created `Note` and that `NotFoundError`/`AmbiguousMatchError` propagate — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
 
 ### Implementation for User Story 4
 
-- [ ] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`, calling `apple.core.append` directly
-- [ ] T021 [US4] Register `create_note` in `src/notes_mcp/server.py` (depends on T017, T020 — same file as T017, sequential)
+- [X] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`, calling `apple.core.append` directly
+- [X] T021 [US4] Register `create_note` in `src/notes_mcp/server.py` (depends on T017, T020 — same file as T017, sequential)
 
 **Checkpoint**: User Stories 1-4 all work independently.
 
@@ -152,8 +152,8 @@ of the others and can be worked on in parallel.
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T022 [P] [US5] Contract test: `update_note` is registered with input `{folder_path, name, content}` (required strings) plus `overwrite` (optional boolean, default `false`), and output unwrapped as a `Note` — in `tests/contract/test_update_note_contract.py` (depends on T003)
-- [ ] T023 [P] [US5] Unit test covering both modes of `update_note`, mocking `apple.core.ls`/`apple.core.mkdir`/`apple.core.mv`/`apple.core.append` — in `tests/unit/tools/test_update_note_unit.py` (depends on T002):
+- [X] T022 [P] [US5] Contract test: `update_note` is registered with input `{folder_path, name, content}` (required strings) plus `overwrite` (optional boolean, default `false`), and output unwrapped as a `Note` — in `tests/contract/test_update_note_contract.py` (depends on T003)
+- [X] T023 [P] [US5] Unit test covering both modes of `update_note`, mocking `apple.core.ls`/`apple.core.mkdir`/`apple.core.mv`/`apple.core.append` — in `tests/unit/tools/test_update_note_unit.py` (depends on T002):
   - Default (`overwrite=False`): verify only `append` is called (pass-through), and that `NotFoundError`/`AmbiguousMatchError` raised by `append` propagate unchanged (FR-006)
   - `overwrite=True`, zero existing matches (mocked `ls` returns no note named `name`): verify `mkdir`/`mv` are **not** called and only `append` is called (falls through to create, per FR-016)
   - `overwrite=True`, exactly one existing match: verify `mkdir("", "archive")` and `mv(...)` are both called **before** `append`, in that order (FR-014), and that an `AlreadyExistsError` raised by `mkdir` (archive folder already present) is swallowed rather than propagating
@@ -162,9 +162,9 @@ of the others and can be worked on in parallel.
 
 ### Implementation for User Story 5
 
-- [ ] T024 [US5] Fix `apple.core.mkdir` to support creating top-level (account-root) folders: update `src/notes_mcp/apple/jxa_scripts/mkdir.js` so a `parent_path == ""` argument creates the folder at the account root instead of raising `NotFoundError("Empty folder path")`, and reports the resulting `path` as just `name` (no leading separator); update the `mkdir()` docstring in `src/notes_mcp/apple/core.py` to document this. No dependency on other US5 tasks — this is a narrowly-scoped backend fix (research.md §8)
-- [ ] T025 [P] [US5] Implement `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note` in `src/notes_mcp/tools/update_note.py`: when `overwrite` is `false`, call `apple.core.append` directly (identical to `create_note`); when `overwrite` is `true`, call `apple.core.ls(folder_path)` and filter its `notes` for `name == name` — if exactly one match, call `apple.core.mkdir("", "archive")` (ignoring `AlreadyExistsError`) then `apple.core.mv(kind="note", identifier=<match id>, destination_folder_path="archive")` before falling through; in every case (including zero matches or more than one), finish by calling `apple.core.append(folder_path, name, content)` — for the ambiguous case this lets `append`'s own existing check raise `AmbiguousMatchError` rather than duplicating that logic (research.md §8) (depends on T024)
-- [ ] T026 [US5] Register `update_note` in `src/notes_mcp/server.py` (depends on T021, T025 — same file as T021, sequential)
+- [X] T024 [US5] Fix `apple.core.mkdir` to support creating top-level (account-root) folders: update `src/notes_mcp/apple/jxa_scripts/mkdir.js` so a `parent_path == ""` argument creates the folder at the account root instead of raising `NotFoundError("Empty folder path")`, and reports the resulting `path` as just `name` (no leading separator); update the `mkdir()` docstring in `src/notes_mcp/apple/core.py` to document this. No dependency on other US5 tasks — this is a narrowly-scoped backend fix (research.md §8)
+- [X] T025 [P] [US5] Implement `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note` in `src/notes_mcp/tools/update_note.py`: when `overwrite` is `false`, call `apple.core.append` directly (identical to `create_note`); when `overwrite` is `true`, call `apple.core.ls(folder_path)` and filter its `notes` for `name == name` — if exactly one match, call `apple.core.mkdir("", "archive")` (ignoring `AlreadyExistsError`) then `apple.core.mv(kind="note", identifier=<match id>, destination_folder_path="archive")` before falling through; in every case (including zero matches or more than one), finish by calling `apple.core.append(folder_path, name, content)` — for the ambiguous case this lets `append`'s own existing check raise `AmbiguousMatchError` rather than duplicating that logic (research.md §8) (depends on T024)
+- [X] T026 [US5] Register `update_note` in `src/notes_mcp/server.py` (depends on T021, T025 — same file as T021, sequential)
 
 **Checkpoint**: All five tools are independently functional, including `update_note`'s replace mode.
 
@@ -174,11 +174,11 @@ of the others and can be worked on in parallel.
 
 **Purpose**: Whole-server verification once all five tools exist
 
-- [ ] T027 [P] Integration test exercising all five tools end-to-end against real Notes.app in a shared scratch folder (create → read → update → read → search → list → update with `overwrite=True` → confirm original archived intact and replacement in place) — in `tests/integration/tools/test_tools_integration.py` (depends on T009, T013, T017, T021, T026)
-- [ ] T028 Update `tests/contract/test_server_tool_registration.py` to assert the full new tool set (`list_folder_contents`, `search_notes`, `read_note`, `create_note`, `update_note`) is advertised and `list_folders` is absent (depends on T009, T013, T017, T021, T026)
-- [ ] T029 Update `tests/contract/test_server_startup_stdio.py`'s real-subprocess tool-list check to reference `list_folder_contents` instead of the retired `list_folders` (depends on T009)
-- [ ] T030 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-005 (including the `overwrite=True` archive-then-replace walkthrough)
-- [ ] T031 Review the five new tool modules and `server.py` for consistent naming/docstrings, confirm no duplicate logging was added at the tool layer (research.md's Observability decision), and remove any dead code
+- [X] T027 [P] Integration test exercising all five tools end-to-end against real Notes.app in a shared scratch folder (create → read → update → read → search → list → update with `overwrite=True` → confirm original archived intact and replacement in place) — in `tests/integration/tools/test_tools_integration.py` (depends on T009, T013, T017, T021, T026)
+- [X] T028 Update `tests/contract/test_server_tool_registration.py` to assert the full new tool set (`list_folder_contents`, `search_notes`, `read_note`, `create_note`, `update_note`) is advertised and `list_folders` is absent (depends on T009, T013, T017, T021, T026)
+- [X] T029 Update `tests/contract/test_server_startup_stdio.py`'s real-subprocess tool-list check to reference `list_folder_contents` instead of the retired `list_folders` (depends on T009)
+- [X] T030 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-005 (including the `overwrite=True` archive-then-replace walkthrough)
+- [X] T031 Review the five new tool modules and `server.py` for consistent naming/docstrings, confirm no duplicate logging was added at the tool layer (research.md's Observability decision), and remove any dead code
 
 ---
 
