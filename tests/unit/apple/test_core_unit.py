@@ -148,29 +148,15 @@ class TestRmFolderStub:
 
 
 class TestRmNote:
-    def test_rm_note_archives_via_mkdir_then_mv(self):
-        mkdir_response = json.dumps({"ok": True, "result": {"name": "archive", "path": "archive", "parent_path": None}})
-        mv_response = json.dumps(
-            {"ok": True, "result": {"id": "note-1", "name": "n", "folder_path": "archive"}}
-        )
-        with patch.object(core.subprocess, "run", side_effect=[_fake_proc(stdout=mkdir_response), _fake_proc(stdout=mv_response)]) as mock_run:
-            result = rm(kind="note", identifier="note-1")
-        assert mock_run.call_count == 2
-        assert result.folder_path == "archive"
-        assert result.id == "note-1"
+    def test_rm_note_invokes_the_rm_note_op_with_the_identifier(self):
+        response = json.dumps({"ok": True, "result": None})
+        with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=response)) as mock_run:
+            rm(kind="note", identifier="note-1")
+        argv = mock_run.call_args.args[0]
+        assert json.loads(argv[-1]) == {"op": "rm_note", "identifier": "note-1"}
 
-    def test_rm_note_swallows_already_exists_error_from_mkdir(self):
-        mkdir_response = json.dumps({"ok": False, "error_type": "AlreadyExistsError", "message": "already there"})
-        mv_response = json.dumps(
-            {"ok": True, "result": {"id": "note-1", "name": "n", "folder_path": "archive"}}
-        )
-        with patch.object(core.subprocess, "run", side_effect=[_fake_proc(stdout=mkdir_response), _fake_proc(stdout=mv_response)]):
-            result = rm(kind="note", identifier="note-1")
-        assert result.folder_path == "archive"
-
-    def test_rm_note_propagates_not_found_error_from_mv(self):
-        mkdir_response = json.dumps({"ok": False, "error_type": "AlreadyExistsError", "message": "already there"})
-        mv_response = json.dumps({"ok": False, "error_type": "NotFoundError", "message": "no such note"})
-        with patch.object(core.subprocess, "run", side_effect=[_fake_proc(stdout=mkdir_response), _fake_proc(stdout=mv_response)]):
+    def test_rm_note_raises_not_found_error(self):
+        response = json.dumps({"ok": False, "error_type": "NotFoundError", "message": "no such note"})
+        with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=response)):
             with pytest.raises(NotFoundError):
                 rm(kind="note", identifier="bad-id")

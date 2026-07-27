@@ -340,27 +340,30 @@ def mv(
     )
 
 
-_ARCHIVE_FOLDER = "archive"
+def rm(kind: Literal["note", "folder"], identifier: str) -> None:
+    """Deletes a note via Notes.app's own delete mechanism.
 
+    This is a raw backend primitive mirroring what Notes.app itself does
+    with a deleted note — verified empirically, `Notes.delete()` moves it
+    into Notes.app's own native "Recently Deleted" folder rather than
+    purging it immediately (the same soft-delete/trash model as Mail or
+    Finder), not an instantly, permanently irrecoverable deletion.
 
-def rm(kind: Literal["note", "folder"], identifier: str) -> Note:
-    """Removes a note by archiving it; folder removal is not implemented yet.
-
-    "Removing" a note never deletes it: it's moved, unchanged, into a
-    single, well-known, top-level `archive` folder (auto-created on first
-    use), the same location `update_note`'s replacement mode uses.
+    No MCP tool in this project calls this function directly. `remove_note`
+    (the tool) does not use it: "removing" a note over MCP means archiving
+    it into a well-known `archive` folder that this project controls,
+    composing `mkdir`/`mv` directly (mirroring `update_note`'s identical
+    composition) — a deliberately different, tool-level policy decision
+    from whatever Notes.app's own delete mechanism happens to do.
 
     Args:
         kind: "note" or "folder" — only "note" is implemented so far.
         identifier: The note's id (`kind="note"`); not used for
             `kind="folder"`.
 
-    Returns:
-        The archived Note (`folder_path` is now `"archive"`).
-
     Raises:
         NotFoundError: No note with `identifier` exists.
-        NotImplementedYetError: `kind` is "folder" — folder removal is
+        NotImplementedYetError: `kind` is "folder" — folder deletion is
             deferred to a future feature.
     """
     if kind == "folder":
@@ -368,11 +371,7 @@ def rm(kind: Literal["note", "folder"], identifier: str) -> Note:
         raise NotImplementedYetError(
             "rm is not implemented yet for folders in this feature; no folder was removed."
         )
-    try:
-        mkdir("", _ARCHIVE_FOLDER)
-    except AlreadyExistsError:
-        pass
-    return mv(kind="note", identifier=identifier, destination_folder_path=_ARCHIVE_FOLDER)
+    _run_jxa({"op": "rm_note", "identifier": identifier})
 
 
 def cat(note_id: str) -> str:

@@ -1,7 +1,10 @@
 # API Contract: Move and Remove a Note
 
-Two MCP tools, each a thin wrapper around one `notes_mcp.apple.core`
-backend function (see
+Two MCP tools. `move_note` is a thin wrapper around one
+`notes_mcp.apple.core` backend function; `remove_note` composes two
+existing backend functions directly (`mkdir` + `mv`) rather than wrapping
+a single one — see the `remove_note` section below for why (amendment,
+research.md §2). See
 [apple_core_api.md](../../002-apple-notes-core-ops/contracts/apple_core_api.md)
 for the full backend contract). Input/output shapes follow the same
 verified-against-the-real-SDK rules established in
@@ -37,7 +40,21 @@ Wraps `apple.core.mv(kind="note", ...)`.
 
 ## `remove_note(note_id: str) -> Note`
 
-Wraps `apple.core.rm(kind="note", identifier=note_id)`.
+Composes `apple.core.mkdir("", "archive")` (swallowing `AlreadyExistsError`)
+then `apple.core.mv(kind="note", identifier=note_id,
+destination_folder_path="archive")` — directly, at the tool layer,
+mirroring `update_note`'s identical archive-on-replace composition
+(feature 003). **Does not call `apple.core.rm`.**
+
+`apple.core.rm(kind="note", ...)` is a separate backend primitive that
+performs a real delete, matching what Notes.app's own delete mechanism
+does (moves the note into Notes' native "Recently Deleted" folder —
+verified empirically, not an instant permanent purge). It exists for
+backend completeness/correctness (mirroring `ls`/`grep`/`mkdir`/`mv`/`cat`/
+`append` as thin, literally-named operations over Apple Notes) but is not
+exposed by any tool in this feature — "remove" over MCP always means
+archive, never Notes' own delete/trash mechanism (amendment, research.md
+§2).
 
 - **Input schema**: `{"note_id": {"type": "string"}}`, required.
 - **Output**: **Not** wrapped — the structured content is the resulting
@@ -47,11 +64,13 @@ Wraps `apple.core.rm(kind="note", identifier=note_id)`.
 - **Errors**: `NotFoundError` if `note_id` does not exist. Nothing is
   removed in that case.
 - Never permanently deletes the note's content — the note continues to
-  exist, unchanged, at the well-known `archive` location (FR-005).
+  exist, unchanged, at the well-known `archive` location (FR-005). This
+  guarantee holds regardless of `apple.core.rm`'s own behavior, since this
+  tool never calls it.
 - Removing a note already located in `archive` succeeds as a no-op with
   respect to its location (research.md §3) — not an error, and does not
   duplicate the note.
-- Folders are out of scope: this tool only ever calls
-  `apple.core.rm(kind="note", ...)`; `apple.core.rm(kind="folder", ...)`
-  remains an unimplemented stub, unchanged, and is not exposed by any
-  tool in this feature.
+- Folders are out of scope: this tool only ever composes note-kind
+  `mkdir`/`mv` calls; `apple.core.rm(kind="folder", ...)` remains an
+  unimplemented stub, unchanged, and — like `rm(kind="note", ...)` — is
+  not exposed by any tool in this feature.
