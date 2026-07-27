@@ -22,7 +22,7 @@ class AutomationPermissionError(AppleNotesError):
 
 
 class NotImplementedYetError(AppleNotesError):
-    """Raised by the `rm` stub. Always."""
+    """Raised by `rm` when called with `kind="folder"` — not yet implemented."""
 
 
 class AmbiguousMatchError(AppleNotesError):

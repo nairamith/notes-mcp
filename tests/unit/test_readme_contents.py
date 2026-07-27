@@ -27,6 +27,14 @@ def test_readme_documents_verification_steps():
 
 def test_readme_documents_current_tools_not_the_retired_placeholder():
     text = _text()
-    for tool in ("list_folder_contents", "search_notes", "read_note", "create_note", "update_note"):
+    for tool in (
+        "list_folder_contents",
+        "search_notes",
+        "read_note",
+        "create_note",
+        "update_note",
+        "move_note",
+        "remove_note",
+    ):
         assert tool in text
     assert "list_folders" not in text

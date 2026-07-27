@@ -340,23 +340,39 @@ def mv(
     )
 
 
-def rm(kind: Literal["note", "folder"], identifier: str) -> None:
-    """Stub for this feature — always raises, never touches Notes data.
+_ARCHIVE_FOLDER = "archive"
 
-    Real removal behavior is deferred to a future feature.
+
+def rm(kind: Literal["note", "folder"], identifier: str) -> Note:
+    """Removes a note by archiving it; folder removal is not implemented yet.
+
+    "Removing" a note never deletes it: it's moved, unchanged, into a
+    single, well-known, top-level `archive` folder (auto-created on first
+    use), the same location `update_note`'s replacement mode uses.
 
     Args:
-        kind: "note" or "folder" — accepted for interface stability but
-            not used yet.
-        identifier: The note's id or the folder's path; not used yet.
+        kind: "note" or "folder" — only "note" is implemented so far.
+        identifier: The note's id (`kind="note"`); not used for
+            `kind="folder"`.
+
+    Returns:
+        The archived Note (`folder_path` is now `"archive"`).
 
     Raises:
-        NotImplementedYetError: Always.
+        NotFoundError: No note with `identifier` exists.
+        NotImplementedYetError: `kind` is "folder" — folder removal is
+            deferred to a future feature.
     """
-    logger.info("op=rm outcome=not_implemented kind=%s", kind)
-    raise NotImplementedYetError(
-        "rm is not implemented yet in this feature; no note or folder was removed."
-    )
+    if kind == "folder":
+        logger.info("op=rm outcome=not_implemented kind=folder")
+        raise NotImplementedYetError(
+            "rm is not implemented yet for folders in this feature; no folder was removed."
+        )
+    try:
+        mkdir("", _ARCHIVE_FOLDER)
+    except AlreadyExistsError:
+        pass
+    return mv(kind="note", identifier=identifier, destination_folder_path=_ARCHIVE_FOLDER)
 
 
 def cat(note_id: str) -> str:

@@ -3,7 +3,7 @@
 An MCP (Model Context Protocol) server for interacting with Apple Notes.
 
 The server talks to Notes.app on macOS via JavaScript for Automation (JXA)
-and exposes five tools over MCP:
+and exposes seven tools over MCP:
 
 - `list_folder_contents(folder_path)` — the notes and subfolders directly
   inside a folder
@@ -15,6 +15,10 @@ and exposes five tools over MCP:
   existing note (creating it if missing), or, with `overwrite=True`, archive
   the existing note into a top-level `archive` folder and create a fresh
   replacement
+- `move_note(note_id, destination_folder_path, new_name=None)` — move a note
+  to a different folder, optionally renaming it in the same call
+- `remove_note(note_id)` — remove a note by archiving it into the same
+  top-level `archive` folder (never a permanent delete)
 
 ## Prerequisites
 
@@ -64,7 +68,7 @@ mcp dev src/notes_mcp/server.py
 This opens the MCP Inspector in a browser. Connect, list tools, and invoke
 `list_folder_contents` with a real top-level folder name from your own Notes
 account, e.g. `{"folder_path": "Notes"}`. It should return that folder's
-actual subfolders and notes — this tool (like all five) talks to your real
+actual subfolders and notes — this tool (like all seven) talks to your real
 Notes data, not stubbed output.
 
 ## Project layout
@@ -73,7 +77,10 @@ Notes data, not stubbed output.
 src/notes_mcp/
 ├── server.py                  # FastMCP server instance, stdio entrypoint, tool registration
 ├── apple/
-│   ├── core.py                # backend: ls, grep, mkdir, mv, rm (stub), cat, append
+│   ├── core.py                # backend: ls, grep, mkdir, mv, rm, cat, append
+│   │                          #   (rm implements real removal for notes —
+│   │                          #    archives via mkdir+mv; folders remain
+│   │                          #    an unimplemented stub)
 │   ├── exceptions.py          # exception hierarchy raised by core.py
 │   ├── schema.py               # Note/Folder/FolderListing data shapes
 │   └── jxa_scripts/            # one JXA script per backend operation
@@ -82,8 +89,10 @@ src/notes_mcp/
     ├── search_notes.py         # wraps apple.core.grep
     ├── read_note.py            # wraps apple.core.cat
     ├── create_note.py          # wraps apple.core.append
-    └── update_note.py          # wraps apple.core.append; overwrite=True also
-                                 # composes ls/mkdir/mv to archive-then-replace
+    ├── update_note.py          # wraps apple.core.append; overwrite=True also
+    │                            # composes ls/mkdir/mv to archive-then-replace
+    ├── move_note.py             # wraps apple.core.mv (note path)
+    └── remove_note.py           # wraps apple.core.rm (note path)
 
 tests/
 ├── contract/                   # MCP tool contract tests (schema/registration)

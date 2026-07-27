@@ -130,14 +130,22 @@ class TestMvIntegration:
 
 
 class TestRmIntegration:
-    def test_rm_never_removes_anything(self, scratch_folder, seed_note):
-        seeded = seed_note(scratch_folder, "keep-me", "content")
+    def test_rm_note_archives_it_with_content_unchanged(self, scratch_folder, seed_note, delete_note_by_id):
+        seeded = seed_note(scratch_folder, "remove-me", "unchanged content")
 
+        try:
+            result = rm(kind="note", identifier=seeded["id"])
+
+            assert result.folder_path == "archive"
+            assert "remove-me" not in [n.name for n in ls(scratch_folder).notes]
+            assert "remove-me" in [n.name for n in ls("archive").notes]
+            assert cat(seeded["id"]) == "unchanged content"
+        finally:
+            delete_note_by_id(seeded["id"])
+
+    def test_rm_folder_still_raises_not_implemented(self, scratch_folder):
         with pytest.raises(NotImplementedYetError):
-            rm(kind="note", identifier=seeded["id"])
-
-        listing = ls(scratch_folder)
-        assert "keep-me" in [n.name for n in listing.notes]
+            rm(kind="folder", identifier=scratch_folder)
 
 
 class TestCatIntegration:
