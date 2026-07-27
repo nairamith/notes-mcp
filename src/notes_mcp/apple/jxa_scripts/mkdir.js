@@ -1,6 +1,7 @@
 function handle(Notes, cmd) {
   var acct = Notes.accounts[0];
-  var parent = resolveFolder(acct, cmd.parent_path);
+  var isRoot = cmd.parent_path === "";
+  var parent = isRoot ? acct : resolveFolder(acct, cmd.parent_path);
   var dupCheck = parent.folders.whose({ name: cmd.name })();
   if (dupCheck.length > 0) {
     throwCustom(
@@ -10,5 +11,6 @@ function handle(Notes, cmd) {
   }
   var newFolder = Notes.Folder({ name: cmd.name });
   parent.folders.push(newFolder);
-  return folderToJson(newFolder, cmd.parent_path + "/" + cmd.name);
+  var path = isRoot ? cmd.name : cmd.parent_path + "/" + cmd.name;
+  return folderToJson(newFolder, path);
 }

@@ -14,23 +14,11 @@ SERVER_PARAMS = StdioServerParameters(
 )
 
 
-async def test_server_starts_and_advertises_list_folders_over_stdio():
+async def test_server_starts_and_advertises_list_folder_contents_over_stdio():
     async with stdio_client(SERVER_PARAMS) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = await session.list_tools()
-            assert "list_folders" in [tool.name for tool in tools.tools]
-
-
-async def test_list_folders_call_over_real_stdio_transport():
-    async with stdio_client(SERVER_PARAMS) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            result = await session.call_tool("list_folders", {})
-            assert result.structuredContent == {
-                "result": [
-                    {"id": "1", "name": "Notes"},
-                    {"id": "2", "name": "Personal"},
-                    {"id": "3", "name": "Work"},
-                ]
-            }
+            names = [tool.name for tool in tools.tools]
+            assert "list_folder_contents" in names
+            assert "list_folders" not in names
