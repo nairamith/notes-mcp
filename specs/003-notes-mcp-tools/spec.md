@@ -14,6 +14,10 @@
 
 - Q: A placeholder `list_folders` tool already exists from an earlier feature, returning fixed stub data (folders only, no notes). Should this feature replace it in place, or add a distinctly-named new tool and retire the stub? → A: Add a new, distinctly-named tool (folders + notes, backed by real data) and retire the existing placeholder `list_folders` tool rather than silently reshaping it.
 
+### Session 2026-07-27 (amendment)
+
+- Q: Should `update_note` gain an explicit overwrite mode, in addition to its existing append-only behavior? → A: Yes — a boolean flag (default `false`, preserving today's append-only behavior). When `true` and a note already exists: archive the existing note (move it into a single, well-known top-level "archive" folder, auto-created on first use, name unchanged) rather than deleting it, then create a fresh note with the new content in the original location. This composes the already-existing `mv`/`append`/`mkdir` backend primitives at the tool layer; it does not require a new backend capability. If no note exists yet, the flag has no effect — a fresh note is simply created either way, matching `create_note`. If the target name is already ambiguous (more than one existing note), the tool still refuses rather than guessing, regardless of the flag.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - List the contents of a folder (Priority: P1)
@@ -123,32 +127,55 @@ content is exactly what was given.
 
 ### User Story 5 - Update a note (Priority: P5)
 
-As an MCP client, I want a tool that adds content to an existing note (or
-creates it if it doesn't exist yet), so that automation can record
-additional information into a note over time without losing what's
-already there.
+As an MCP client, I want a tool that either adds to an existing note's
+content or fully replaces it, so that automation can both record
+additional information over time and, when appropriate, start a note's
+content fresh — without ever silently destroying the note's previous
+content in the process.
 
 **Why this priority**: The only capability that modifies existing note
 content, so it's delivered last, after the read tools that let a caller
 verify its effects and after the safer additive tool (create) is already
 in place. Placed after "create" specifically because updating something
-that might not exist yet builds on the same create-if-missing behavior.
+that might not exist yet builds on the same create-if-missing behavior,
+and because its replace mode itself builds directly on "create" (the
+fresh note it produces) plus the backend's existing move capability (to
+preserve, not destroy, what's replaced).
 
-**Independent Test**: Call the tool against a note with existing content
-and confirm (via reading) the note afterward contains both the original
-and the newly added content, with nothing lost.
+**Independent Test (append mode, the default)**: Call the tool against a
+note with existing content, without requesting replacement, and confirm
+(via reading) the note afterward contains both the original and the newly
+added content, with nothing lost.
+
+**Independent Test (replace mode)**: Call the tool against a note with
+existing content, requesting replacement; confirm (via reading, at its
+original location) a note now exists there with only the new content, and
+confirm (via listing the archive location) the original note — with its
+original content intact — is now there instead of gone.
 
 **Acceptance Scenarios**:
 
 1. **Given** a note that already has content, **When** the tool is
-   called with additional content, **Then** the note's content afterward
-   includes both the original and the newly added content.
+   called without requesting replacement, **Then** the note's content
+   afterward includes both the original and the newly added content.
 2. **Given** no note by the given name exists yet in the given folder,
-   **When** the tool is called, **Then** a new note is created there
-   with the given content, exactly as User Story 4 describes.
+   **When** the tool is called (with or without requesting replacement),
+   **Then** a new note is created there with the given content, exactly
+   as User Story 4 describes — requesting replacement has no effect when
+   there is nothing yet to replace.
 3. **Given** more than one note already shares the given name in the
-   given folder, **When** the tool is called, **Then** it returns a
-   clear, structured error rather than guessing which note to change.
+   given folder, **When** the tool is called (with or without requesting
+   replacement), **Then** it returns a clear, structured error rather
+   than guessing which note to change.
+4. **Given** a note that already has content, **When** the tool is
+   called requesting replacement, **Then** afterward: the original note
+   (with its original content, unchanged) is found in a single,
+   well-known archive location rather than deleted, and a new note with
+   only the newly given content exists at the original name and folder.
+5. **Given** the well-known archive location doesn't exist yet, **When**
+   the tool is called requesting replacement for the first time,
+   **Then** the archive location is created automatically rather than
+   the call failing for lack of it.
 
 ---
 
@@ -164,6 +191,16 @@ and the newly added content, with nothing lost.
   `list_folders` tool once it's removed from the server's advertised
   tool list? (See FR-011 — it simply stops being offered; there is no
   known existing caller to migrate.)
+- What happens if replacement is requested repeatedly over time for
+  notes sharing the same name? (Each replaced note accumulates in the
+  archive location under its original name; Apple Notes does not require
+  note names to be unique, so this is expected, not an error — see
+  Assumptions.)
+- What happens if archiving the original note succeeds but creating the
+  replacement fails partway through, or vice versa? (See FR-014 — the
+  tool MUST archive first and only then create the replacement, so a
+  failure never results in the original note's content being lost with
+  no replacement created.)
 
 ## Requirements *(mandatory)*
 
@@ -182,14 +219,37 @@ and the newly added content, with nothing lost.
 - **FR-004**: The system MUST provide an MCP tool that creates a new note
   with given content in a given, existing folder, backed by the existing
   `append` backend capability's create-if-missing behavior.
-- **FR-005**: The system MUST provide an MCP tool that adds content to an
-  existing note — or creates it first if no note by that name exists yet
-  in the given folder — backed by the existing `append` backend
-  capability. It MUST NOT overwrite or remove any of the note's existing
-  content.
+- **FR-005**: The system MUST provide an MCP tool that, by default, adds
+  content to an existing note — or creates it first if no note by that
+  name exists yet in the given folder — backed by the existing `append`
+  backend capability. In this default (append) mode, it MUST NOT overwrite
+  or remove any of the note's existing content.
 - **FR-006**: The note-update tool MUST fail with a clear, structured
   error — rather than guessing — when its target name matches more than
-  one note in the given folder.
+  one note in the given folder, regardless of whether replacement is
+  requested.
+- **FR-012**: The note-update tool MUST accept a boolean flag indicating
+  whether to replace the note's content instead of appending to it,
+  defaulting to `false` (append) so existing callers relying on today's
+  append-only behavior are unaffected.
+- **FR-013**: When the replacement flag is `true` and a note by the given
+  name already (unambiguously) exists, the tool MUST move that existing
+  note — unchanged — into a single, well-known top-level archive
+  location, then create a new note with the given content at the
+  original folder and name. It MUST NOT delete the original note's
+  content at any point.
+- **FR-014**: The archive move (FR-013) MUST complete before the
+  replacement note is created, so that a failure to archive never leaves
+  the system having created a replacement while losing the original, and
+  never results in two notes of the same name coexisting in the original
+  folder afterward.
+- **FR-015**: If the archive location does not yet exist the first time
+  it's needed, the tool MUST create it automatically rather than fail for
+  its absence.
+- **FR-016**: When the replacement flag is `true` but no note by the
+  given name exists yet, the tool MUST simply create a new note with the
+  given content (there is nothing to archive) — identical to the
+  append-mode behavior in that same situation (FR-005, User Story 4).
 - **FR-007**: Every tool defined in this feature MUST translate the
   backend's typed errors (not-found, invalid pattern, ambiguous match,
   automation-permission-not-granted) into clear, structured MCP tool
@@ -199,8 +259,9 @@ and the newly added content, with nothing lost.
   them MUST NOT change any Notes data.
 - **FR-009**: Each of the five tools MUST have an automated test covering
   its behavior, per this project's Test-First principle, including the
-  note-update tool's create-if-missing path and its ambiguous-match error
-  path.
+  note-update tool's create-if-missing path, its ambiguous-match error
+  path, its replace-mode archive-then-recreate path, and its
+  replace-mode archive-location auto-creation path.
 - **FR-010**: Each tool's input and output MUST have an explicit,
   documented schema, consistent with this project's MCP Contract
   Integrity principle — this feature is the first to expose these
@@ -234,25 +295,46 @@ and the newly added content, with nothing lost.
   update tool, is visible with its expected content via the listing and
   reading tools immediately afterward, with no delay or extra steps.
 - **SC-004**: Updating a note never loses previously recorded content —
-  100% of update calls on a note with existing content preserve that
-  content alongside the newly added content.
+  100% of append-mode update calls on a note with existing content
+  preserve that content alongside the newly added content.
+- **SC-005**: Replacing a note's content (update mode with replacement
+  requested) never actually destroys the prior content — 100% of the
+  time, the original note is found intact in the archive location
+  immediately afterward, not gone.
 
 ## Assumptions
 
 - This feature wires existing backend capabilities (`ls`, `grep`, `cat`,
-  `append`) into MCP tools; it does not add new backend behavior. Where
-  the backend's contract already defines something (e.g., `append`'s
-  newline-separated, non-destructive write behavior, or `grep`'s Python
-  regular-expression matching), the corresponding tool exposes that
-  behavior as-is rather than redefining it.
-- "Update a note" means adding content to it (via `append`), not
-  replacing its existing content — the backend has no
-  replace/overwrite-note capability, and this feature does not add one.
+  `append`, and — for the note-update tool's replacement mode only, in
+  addition to `ls` and `append` — `mv` and `mkdir`) into MCP tools; it
+  does not add any new *backend* function, though it does require a
+  small, narrow fix to `mkdir` (which currently cannot create a top-level
+  folder at all — see research.md §8) since the archive location needs
+  to be one. Where the backend's contract already defines something
+  (e.g., `append`'s newline-separated, non-destructive write behavior, or
+  `grep`'s Python regular-expression matching), the corresponding tool
+  exposes that behavior as-is rather than redefining it.
+- By default, "update a note" means adding content to it (via `append`),
+  not replacing its existing content. An explicit replacement flag
+  (FR-012) opts into replace behavior, implemented by composing the
+  backend's existing `mv` (to archive the original, unchanged) and
+  `append`/`mkdir` (to create the replacement, and the archive location
+  if needed) — not by adding a new destructive backend primitive. The
+  backend still has no in-place overwrite capability; replacement here
+  never edits a note's content directly, it moves the old one aside and
+  creates a new one.
+- The archive location is a single, well-known, top-level folder — not
+  one archive folder per source folder — shared by every note replaced
+  by this tool regardless of where it originally lived. Archived notes
+  keep their original name (no timestamp or other renaming is applied);
+  since Apple Notes does not require note names to be unique, multiple
+  archived notes sharing a name over time is expected, not an error.
 - The note-creation tool requires its target folder to already exist; it
   does not create missing folders (matching `append`'s existing
-  behavior). `mkdir`, `mv`, and `rm` (folder creation, moving/renaming,
-  and deletion) are explicitly out of scope for this feature — only the
-  five listed capabilities are exposed as tools here.
+  behavior). Folder creation, moving/renaming, and deletion are not
+  exposed as their own standalone tools in this feature — `mv` and
+  `mkdir` are used only internally, by the note-update tool's replacement
+  mode, not as directly callable capabilities.
 - The search tool exposes the backend's existing Python-regular-expression
   pattern matching as-is, rather than introducing a simplified pattern
   language.

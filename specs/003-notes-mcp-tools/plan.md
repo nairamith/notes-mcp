@@ -17,13 +17,29 @@ need their own error-handling code. The existing placeholder `list_folders`
 tool, its stub data, and its dedicated tests are retired as part of this
 feature (FR-011), per the resolved clarification.
 
+`update_note` additionally takes a boolean replacement flag (default
+`false`, FR-012). When `true` and a note already exists, it archives the
+existing note (via the backend's existing `mv`, into a single, auto-created
+top-level archive folder) before creating a replacement via `append` — a
+composition of already-existing backend primitives (`ls` to check for an
+existing match, `mv`, `append`) at the tool layer, not a new backend
+capability (research.md §8). One narrow exception: `mkdir` currently
+cannot create a *top-level* folder at all (verified empirically), which
+the archive location needs to be — a small, targeted fix to
+`jxa_scripts/mkdir.js` is in scope here (research.md §8), not a new
+function.
+
 ## Technical Context
 
 **Language/Version**: Python 3.11+ (existing `notes-mcp` package)
 
 **Primary Dependencies**: None beyond what's already in the project —
 `mcp` (already a dependency, for `FastMCP`) and `notes_mcp.apple.core`
-(already built, this project's own backend module).
+(already built, this project's own backend module — `update_note`'s
+replacement mode additionally calls the backend's existing `ls`, `mv`,
+and `mkdir` functions; `mkdir` needs a small, scoped fix to support
+top-level folder creation, which it currently cannot do at all —
+research.md §8).
 
 **Storage**: N/A — no new persistence; each tool is a pass-through to the
 existing backend, which itself talks to Notes.app live.
@@ -51,7 +67,10 @@ backend's own performance guarantees (e.g. `grep`'s SC-002 from feature
 MCP client as a structured result, never a server crash (verified
 achievable via the SDK's built-in behavior — research.md §2); the
 existing placeholder `list_folders` tool must be fully retired, not left
-running alongside the new tools (FR-011).
+running alongside the new tools (FR-011); `update_note`'s replacement
+mode must archive the original note before creating its replacement, never
+the other order, so a failure partway through never loses content with no
+replacement created (FR-014).
 
 **Scale/Scope**: Same personal-scale target as the backend (hundreds of
 notes/folders); five tools, each a few lines of wrapper code.
@@ -62,11 +81,11 @@ notes/folders); five tools, each a few lines of wrapper code.
 
 | Principle | Status | Notes |
 |---|---|---|
-| I. Simplicity & YAGNI | PASS | Each tool is a thin, direct wrapper around one existing backend function — no new abstraction layer, no shared "tool base class." `create_note`/`update_note` are two small separate functions rather than one parameterized helper, since the point of having two tools is the distinct metadata/description an MCP client sees, not code reuse. |
-| II. Test-First, Test-Always | PASS | Every tool gets a mocked unit test (schema/error-translation) and a real-Notes integration test, per FR-009. The backend's existing test infrastructure is reused, not duplicated. |
-| III. MCP Contract Integrity | PASS | This is the first feature where this principle is fully live (feature 002 was N/A — backend only). Every tool's input/output schema is documented in contracts/; errors surface as explicit `isError: true` results with a descriptive message, never a silent failure or a crash (FR-007). |
-| IV. Safe, Reversible Data Operations | PASS | Only additive tools are exposed (`create_note`, `update_note`, both backed by `append`, which never overwrites or removes content). No destructive tool (`mkdir`/`mv`/`rm`) is wired in this feature, per spec Assumptions. |
-| V. Observability & Debuggability | PASS | The backend (`apple.core`) already logs every underlying call's name, outcome, and duration; since each tool is a direct 1:1 wrapper, no duplicate logging is added at the tool layer (would be redundant, not more observable). |
+| I. Simplicity & YAGNI | PASS | Each tool is a thin, direct wrapper around one existing backend function — no new abstraction layer, no shared "tool base class." `create_note`/`update_note` are two small separate functions rather than one parameterized helper, since the point of having two tools is the distinct metadata/description an MCP client sees, not code reuse. `update_note`'s replacement mode composes existing `ls`/`mv`/`mkdir`/`append` primitives directly, in-line, rather than introducing a new backend abstraction for "archive and replace." The one backend change (`mkdir.js`'s root-folder fix) is scoped to exactly the gap this feature hit, not generalized further than needed. |
+| II. Test-First, Test-Always | PASS | Every tool gets a mocked unit test (schema/error-translation) and a real-Notes integration test, per FR-009 — including `update_note`'s replace-mode archive-then-recreate path and its archive-location auto-creation path. The backend's existing test infrastructure is reused, not duplicated. |
+| III. MCP Contract Integrity | PASS | This is the first feature where this principle is fully live (feature 002 was N/A — backend only). Every tool's input/output schema is documented in contracts/, including `update_note`'s new `overwrite` parameter; errors surface as explicit `isError: true` results with a descriptive message, never a silent failure or a crash (FR-007). |
+| IV. Safe, Reversible Data Operations | PASS | `create_note` and `update_note`'s default (append) mode are purely additive, backed by `append`, which never overwrites or removes content. `update_note`'s replacement mode is a deliberate exception this constitution explicitly anticipates ("prefer additive/reversible operations... over hard deletes"): it never deletes — it archives the original (via `mv`) before creating a replacement, and archiving is required to complete first (FR-014) so a partial failure can never silently lose content. No tool in this feature performs an actual deletion. |
+| V. Observability & Debuggability | PASS | The backend (`apple.core`) already logs every underlying call's name, outcome, and duration; since each tool is a direct 1:1 wrapper (or, for `update_note`'s replace mode, a direct 1:1 composition of existing backend calls), no duplicate logging is added at the tool layer (would be redundant, not more observable). |
 | VI. Minimal, Justified Dependencies | PASS | Zero new dependencies. |
 
 No violations. Complexity Tracking table is not needed for this feature.
@@ -92,14 +111,23 @@ specs/003-notes-mcp-tools/
 src/notes_mcp/
 ├── server.py                       # updated — remove list_folders registration,
 │                                    #           register the 5 new tools
-├── apple/                          # existing backend — untouched by this feature
+├── apple/
+│   └── jxa_scripts/mkdir.js        # updated — small, scoped fix: parent_path=""
+│                                    #           now creates a top-level folder,
+│                                    #           needed for the archive location
+│                                    #           (research.md §8); everything else
+│                                    #           in apple/ is untouched
 └── tools/
     ├── list_folders.py             # REMOVED — retired placeholder (FR-011)
     ├── list_folder_contents.py     # new — wraps apple.core.ls
     ├── search_notes.py             # new — wraps apple.core.grep
     ├── read_note.py                # new — wraps apple.core.cat
     ├── create_note.py              # new — wraps apple.core.append
-    └── update_note.py              # new — wraps apple.core.append
+    └── update_note.py              # new — wraps apple.core.append; when
+                                     #      overwrite=True, also composes
+                                     #      apple.core.mkdir (archive folder,
+                                     #      if missing) and apple.core.mv
+                                     #      (archive the original note first)
 
 tests/
 ├── contract/

@@ -146,21 +146,27 @@ of the others and can be worked on in parallel.
 
 ## Phase 7: User Story 5 - Update a note (Priority: P5)
 
-**Goal**: `update_note(folder_path, name, content)` appends to an existing note (or creates it, matching User Story 4, if it doesn't exist yet), via `apple.core.append`.
+**Goal**: `update_note(folder_path, name, content, overwrite=False)` appends to an existing note by default (or creates it, matching User Story 4, if it doesn't exist yet), via `apple.core.append`. When `overwrite=True` and exactly one note named `name` already exists, it archives that note (via `apple.core.mv`, into a single, auto-created top-level `archive` folder) before creating a replacement — composing `apple.core.ls`, `apple.core.mkdir`, and `apple.core.mv` with the existing `apple.core.append` call (research.md §8).
 
-**Independent Test**: Call the tool against a note with existing content and confirm (via reading) the note afterward contains both the original and the newly added content.
+**Independent Test**: Default mode — call the tool against a note with existing content and confirm (via reading) the note afterward contains both the original and the newly added content. Replace mode — call the tool with `overwrite=True` against a note with existing content and confirm (via reading) the note at the original location now contains *only* the new content, while the original content is preserved, unchanged, under the `archive` folder.
 
 ### Tests for User Story 5 (MANDATORY) ⚠️
 
-- [ ] T022 [P] [US5] Contract test: `update_note` is registered with the same input/output shape as `create_note` — in `tests/contract/test_update_note_contract.py` (depends on T003)
-- [ ] T023 [P] [US5] Unit test: mocking `apple.core.append`, verify pass-through and that `NotFoundError`/`AmbiguousMatchError` propagate, including the ambiguous-match case (FR-006) — in `tests/unit/tools/test_update_note_unit.py` (depends on T002)
+- [ ] T022 [P] [US5] Contract test: `update_note` is registered with input `{folder_path, name, content}` (required strings) plus `overwrite` (optional boolean, default `false`), and output unwrapped as a `Note` — in `tests/contract/test_update_note_contract.py` (depends on T003)
+- [ ] T023 [P] [US5] Unit test covering both modes of `update_note`, mocking `apple.core.ls`/`apple.core.mkdir`/`apple.core.mv`/`apple.core.append` — in `tests/unit/tools/test_update_note_unit.py` (depends on T002):
+  - Default (`overwrite=False`): verify only `append` is called (pass-through), and that `NotFoundError`/`AmbiguousMatchError` raised by `append` propagate unchanged (FR-006)
+  - `overwrite=True`, zero existing matches (mocked `ls` returns no note named `name`): verify `mkdir`/`mv` are **not** called and only `append` is called (falls through to create, per FR-016)
+  - `overwrite=True`, exactly one existing match: verify `mkdir("", "archive")` and `mv(...)` are both called **before** `append`, in that order (FR-014), and that an `AlreadyExistsError` raised by `mkdir` (archive folder already present) is swallowed rather than propagating
+  - `overwrite=True`, `mv` raises: verify `append` is **not** called afterward (archive-first ordering protects against partial failure, FR-014)
+  - `overwrite=True`, more than one existing match: verify `mkdir`/`mv` are **not** called and `append` is still called, which is where the `AmbiguousMatchError` is expected to surface (the tool does not duplicate `append`'s own ambiguity check — research.md §8)
 
 ### Implementation for User Story 5
 
-- [ ] T024 [P] [US5] Implement `update_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/update_note.py`, calling `apple.core.append` directly (same underlying call as `create_note`, kept as a separate function per research.md §5)
-- [ ] T025 [US5] Register `update_note` in `src/notes_mcp/server.py` (depends on T021, T024 — same file as T021, sequential)
+- [ ] T024 [US5] Fix `apple.core.mkdir` to support creating top-level (account-root) folders: update `src/notes_mcp/apple/jxa_scripts/mkdir.js` so a `parent_path == ""` argument creates the folder at the account root instead of raising `NotFoundError("Empty folder path")`, and reports the resulting `path` as just `name` (no leading separator); update the `mkdir()` docstring in `src/notes_mcp/apple/core.py` to document this. No dependency on other US5 tasks — this is a narrowly-scoped backend fix (research.md §8)
+- [ ] T025 [P] [US5] Implement `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note` in `src/notes_mcp/tools/update_note.py`: when `overwrite` is `false`, call `apple.core.append` directly (identical to `create_note`); when `overwrite` is `true`, call `apple.core.ls(folder_path)` and filter its `notes` for `name == name` — if exactly one match, call `apple.core.mkdir("", "archive")` (ignoring `AlreadyExistsError`) then `apple.core.mv(kind="note", identifier=<match id>, destination_folder_path="archive")` before falling through; in every case (including zero matches or more than one), finish by calling `apple.core.append(folder_path, name, content)` — for the ambiguous case this lets `append`'s own existing check raise `AmbiguousMatchError` rather than duplicating that logic (research.md §8) (depends on T024)
+- [ ] T026 [US5] Register `update_note` in `src/notes_mcp/server.py` (depends on T021, T025 — same file as T021, sequential)
 
-**Checkpoint**: All five tools are independently functional.
+**Checkpoint**: All five tools are independently functional, including `update_note`'s replace mode.
 
 ---
 
@@ -168,11 +174,11 @@ of the others and can be worked on in parallel.
 
 **Purpose**: Whole-server verification once all five tools exist
 
-- [ ] T026 [P] Integration test exercising all five tools end-to-end against real Notes.app in a shared scratch folder (create → read → update → read → search → list) — in `tests/integration/tools/test_tools_integration.py` (depends on T009, T013, T017, T021, T025)
-- [ ] T027 Update `tests/contract/test_server_tool_registration.py` to assert the full new tool set (`list_folder_contents`, `search_notes`, `read_note`, `create_note`, `update_note`) is advertised and `list_folders` is absent (depends on T009, T013, T017, T021, T025)
-- [ ] T028 Update `tests/contract/test_server_startup_stdio.py`'s real-subprocess tool-list check to reference `list_folder_contents` instead of the retired `list_folders` (depends on T009)
-- [ ] T029 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-004
-- [ ] T030 Review the five new tool modules and `server.py` for consistent naming/docstrings, confirm no duplicate logging was added at the tool layer (research.md's Observability decision), and remove any dead code
+- [ ] T027 [P] Integration test exercising all five tools end-to-end against real Notes.app in a shared scratch folder (create → read → update → read → search → list → update with `overwrite=True` → confirm original archived intact and replacement in place) — in `tests/integration/tools/test_tools_integration.py` (depends on T009, T013, T017, T021, T026)
+- [ ] T028 Update `tests/contract/test_server_tool_registration.py` to assert the full new tool set (`list_folder_contents`, `search_notes`, `read_note`, `create_note`, `update_note`) is advertised and `list_folders` is absent (depends on T009, T013, T017, T021, T026)
+- [ ] T029 Update `tests/contract/test_server_startup_stdio.py`'s real-subprocess tool-list check to reference `list_folder_contents` instead of the retired `list_folders` (depends on T009)
+- [ ] T030 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-005 (including the `overwrite=True` archive-then-replace walkthrough)
+- [ ] T031 Review the five new tool modules and `server.py` for consistent naming/docstrings, confirm no duplicate logging was added at the tool layer (research.md's Observability decision), and remove any dead code
 
 ---
 
@@ -182,13 +188,13 @@ of the others and can be worked on in parallel.
 
 - **Setup (Phase 1)**: No dependencies — can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion — BLOCKS all user stories
-- **User Stories (Phase 3-7)**: Each depends on Foundational phase completion. Each tool's *implementation* file is independent of the others' (different files) — US1-US5 could be built in parallel by different people. Each tool's *registration*, however, is a sequential edit to the shared `server.py`, so registration tasks (T009, T013, T017, T021, T025) must land in some serial order regardless of which story's turn it "is" — the order shown (P1→P5) is simplest, not mandatory.
+- **User Stories (Phase 3-7)**: Each depends on Foundational phase completion. Each tool's *implementation* file is independent of the others' (different files) — US1-US5 could be built in parallel by different people. Each tool's *registration*, however, is a sequential edit to the shared `server.py`, so registration tasks (T009, T013, T017, T021, T026) must land in some serial order regardless of which story's turn it "is" — the order shown (P1→P5) is simplest, not mandatory. Within US5, the `mkdir.js` fix (T024) must land before `update_note`'s implementation (T025), which must land before its registration (T026).
 - **Polish (Final Phase)**: Depends on all five user stories being complete
 
 ### Same-File Sequencing (overrides story-parallel opportunities)
 
-- All edits to `src/notes_mcp/server.py` (T003, T009, T013, T017, T021, T025) must happen sequentially, in that order, regardless of which story they belong to
-- `tests/contract/test_server_tool_registration.py` (T027) and `tests/contract/test_server_startup_stdio.py` (T028) are each touched once, in Polish, after all registrations exist
+- All edits to `src/notes_mcp/server.py` (T003, T009, T013, T017, T021, T026) must happen sequentially, in that order, regardless of which story they belong to
+- `tests/contract/test_server_tool_registration.py` (T028) and `tests/contract/test_server_startup_stdio.py` (T029) are each touched once, in Polish, after all registrations exist
 
 ### Within Each User Story
 
@@ -200,9 +206,10 @@ of the others and can be worked on in parallel.
 
 - T001 and T002 (Setup) can run in parallel
 - T004 and T005 (Foundational) can run in parallel — different files
-- Within each user story, its contract test, unit test, and implementation file are three different files and can all be started in parallel; only that story's *registration* task must wait for the previous registration to land
-- T008, T012, T016, T020, T024 (the five tool implementations) are mutually independent and could all be written in parallel, even across stories, since each is its own new file
-- T029 (Polish) can run in parallel with T030
+- Within each of US1-US4, its contract test, unit test, and implementation file are three different files and can all be started in parallel; only that story's *registration* task must wait for the previous registration to land
+- Within US5, T022 (contract test) and T023 (unit test) can run in parallel with each other and with T024 (the `mkdir.js` fix); T025 (implementation) depends on T024 specifically, since it calls the fixed `mkdir` behavior
+- T008, T012, T016, T020, T025 (the five tool implementations) are mutually independent of each other's *files* and could all be drafted in parallel, even across stories — though T025 still can't be considered done until T024 lands, since it depends on `mkdir`'s fixed behavior
+- T030 (Polish) can run in parallel with T031
 
 ---
 
@@ -234,7 +241,7 @@ Task: "Implement list_folder_contents in src/notes_mcp/tools/list_folder_content
 3. Add User Story 2 (`search_notes`) → Validate independently
 4. Add User Story 3 (`read_note`) → Validate independently
 5. Add User Story 4 (`create_note`) → Validate independently
-6. Add User Story 5 (`update_note`) → Validate independently (builds on the same `append` path as US4)
+6. Add User Story 5 (`update_note`) → Validate independently (default mode builds on the same `append` path as US4; `overwrite=True` mode additionally composes `ls`/`mkdir`/`mv`)
 7. Each story adds value without breaking previous stories
 
 ---
@@ -249,7 +256,11 @@ Task: "Implement list_folder_contents in src/notes_mcp/tools/list_folder_content
 - Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
-- `create_note` and `update_note` call the exact same backend function
-  (`apple.core.append`) and behave identically regardless of which name is
-  called — they exist as two tools for the distinct metadata/description
-  an MCP client sees, not two different behaviors (research.md §5)
+- `create_note` and `update_note`'s default (`overwrite=False`) mode call
+  the exact same backend function (`apple.core.append`) and behave
+  identically regardless of which name is called — they exist as two
+  tools for the distinct metadata/description an MCP client sees, not two
+  different behaviors (research.md §5). `update_note`'s `overwrite=True`
+  mode is the one place the two tools genuinely diverge — `create_note`
+  has no equivalent, since it has no existing note to replace (research.md
+  §8)

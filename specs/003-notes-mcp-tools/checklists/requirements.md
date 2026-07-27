@@ -41,4 +41,17 @@
   `grep`, `cat`, `append` are named because the user explicitly required
   reusing those existing backend functions, not because the spec is
   prescribing implementation.
-- All items pass; no spec updates required before `/speckit-plan`.
+- Amended 2026-07-27: added `update_note`'s replacement mode (boolean
+  flag, defaulting to append-only for backward compatibility) — archives
+  the original note (via `mv`, to a single auto-created top-level archive
+  location) before creating its replacement (via `append`), rather than
+  overwriting content in place. Resolved by reasoning through the
+  constraints (archive-first ordering to avoid data loss on partial
+  failure, auto-create the archive location, no renaming of archived
+  notes) rather than an interactive clarification, since safe, defensible
+  defaults existed for each point. See spec.md Clarifications
+  (2026-07-27 amendment) and Assumptions.
+- All items still pass after the amendment; no spec updates required
+  before `/speckit-tasks`. Note: `plan.md`/`research.md`/`contracts/` and
+  `tasks.md` need to be updated to reflect the new replacement mode
+  before `/speckit-implement`.

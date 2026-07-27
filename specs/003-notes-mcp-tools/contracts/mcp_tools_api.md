@@ -63,23 +63,47 @@ here; see the note below on ambiguity).
   once in `folder_path` (inherited from `append`'s contract — see note
   below).
 
-## `update_note(folder_path: str, name: str, content: str) -> Note`
+## `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note`
 
-Wraps `apple.core.append` (its append-to-existing path is the intended use
-here).
+Default (`overwrite=False`): wraps `apple.core.append` (its
+append-to-existing path is the intended use here) — identical to
+`create_note`'s behavior otherwise.
 
-- **Input schema**: Identical to `create_note`'s.
-- **Output**: Identical shape to `create_note`'s — the resulting `Note`.
-- **Errors**: Same as `create_note` — `NotFoundError`, `AmbiguousMatchError`.
-- Never overwrites or removes existing content (FR-005); appended content
-  is newline-separated from what was already there (inherited from
-  `append`'s contract, research.md §6a in feature 002).
+When `overwrite=True`: first calls `apple.core.ls(folder_path)` to check
+how many notes are already named `name` (zero, one, or ambiguous — see
+Errors below). If exactly one: archives it (via `apple.core.mv`, into a
+single, fixed, top-level `archive` folder — auto-created via
+`apple.core.mkdir` if it doesn't exist yet; `mkdir` required a small fix
+to support top-level folder creation at all, research.md §8) and only
+then creates a new note with `content` at `folder_path`/`name` (via
+`apple.core.append`'s create-if-missing path). See research.md §8 for the
+full design and why the archive step must complete before the create
+step.
 
-**Note on `create_note` vs. `update_note`**: both call the same
-`append()` function, which already does the right thing regardless of
-whether a note exists yet — `create_note` and `update_note` are the same
-underlying operation surfaced under two names/descriptions for a caller's
-clarity of intent (research.md §5), not two different behaviors. Calling
-`create_note` on a note that already exists behaves exactly like
-`update_note` (appends), and vice versa; this is inherited, not new,
-behavior from FR-004/FR-005.
+- **Input schema**: `folder_path`, `name`, `content` — strings, required;
+  `overwrite` — boolean, optional, default `false`.
+- **Output**: **Not** wrapped — the structured content is the resulting
+  `Note` directly: `{"id", "name", "folder_path"}`. When `overwrite=True`
+  archived an old note, that note's `Note` can subsequently be found via
+  `list_folder_contents("archive")` — its own `id`/`name` are unchanged,
+  only `folder_path` becomes `"archive"`.
+- **Errors**: `NotFoundError` if `folder_path` doesn't exist;
+  `AmbiguousMatchError` if a note named `name` already exists more than
+  once in `folder_path` — checked before any change is made, regardless
+  of `overwrite`.
+- Never overwrites or removes existing content in place, in either mode
+  (FR-005, FR-013): append mode adds newline-separated content (inherited
+  from `append`'s contract, research.md §6a in feature 002); replace mode
+  preserves the original note's content unchanged, just relocated to
+  `archive`, rather than editing or deleting it.
+
+**Note on `create_note` vs. `update_note`**: in `update_note`'s default
+(`overwrite=False`) mode, both call the same `append()` function, which
+already does the right thing regardless of whether a note exists yet —
+they're the same underlying operation surfaced under two names/
+descriptions for a caller's clarity of intent (research.md §5), not two
+different behaviors. Calling `create_note` on a note that already exists
+behaves exactly like `update_note` with `overwrite=False` (appends), and
+vice versa. `update_note`'s `overwrite=True` mode is the one place the two
+tools genuinely diverge — `create_note` has no equivalent, since it has no
+existing note to replace in the first place.

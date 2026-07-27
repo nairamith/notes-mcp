@@ -14,6 +14,15 @@ See [contracts/mcp_tools_api.md](./contracts/mcp_tools_api.md) for exactly
 how each shape appears in a tool's structured MCP response (some are
 wrapped under a `result` key, some are not — see research.md §4).
 
+## Archive location (amendment)
+
+Not a new entity type — just an ordinary `Folder` (see above), at the
+fixed top-level path `archive`. Created automatically, the first time
+`update_note`'s replacement mode needs it, by the tool itself (research.md
+§8). Notes moved there by that mode keep all their existing `Note` fields
+unchanged (`id`, `name`, `content`) — only `folder_path` changes, to
+`archive`.
+
 ## Retired
 
 The placeholder `Folder` pydantic model defined in the now-removed
