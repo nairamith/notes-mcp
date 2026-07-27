@@ -1,103 +1,92 @@
 # notes-mcp
 
-An MCP (Model Context Protocol) server for interacting with Apple Notes.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-The server talks to Notes.app on macOS via JavaScript for Automation (JXA)
-and exposes seven tools over MCP:
+A local [MCP](https://modelcontextprotocol.io) (Model Context Protocol) server that gives AI assistants like Claude direct access to Apple Notes on macOS — list, search, read, create, update, move, and remove notes, without leaving your terminal or IDE.
 
-- `list_folder_contents(folder_path)` — the notes and subfolders directly
-  inside a folder
-- `search_notes(pattern, folder_path=None)` — notes whose content matches a
-  regular expression, optionally scoped to a folder
+The server talks to Notes.app via JavaScript for Automation (JXA); your notes never leave your machine.
+
+## Features
+
+- `list_folder_contents(folder_path)` — the notes and subfolders directly inside a folder
+- `search_notes(pattern, folder_path=None)` — notes whose content matches a regular expression, optionally scoped to a folder
 - `read_note(note_id)` — a note's content
 - `create_note(folder_path, name, content)` — create a new note
-- `update_note(folder_path, name, content, overwrite=False)` — append to an
-  existing note (creating it if missing), or, with `overwrite=True`, archive
-  the existing note into a top-level `archive` folder and create a fresh
-  replacement
-- `move_note(note_id, destination_folder_path, new_name=None)` — move a note
-  to a different folder, optionally renaming it in the same call
-- `remove_note(note_id)` — remove a note by archiving it into the same
-  top-level `archive` folder (never a permanent delete)
+- `update_note(folder_path, name, content, overwrite=False)` — append to an existing note (creating it if missing), or, with `overwrite=True`, archive the existing note and create a fresh replacement
+- `move_note(note_id, destination_folder_path, new_name=None)` — move a note to a different folder, optionally renaming it in the same call
+- `remove_note(note_id)` — remove a note by archiving it (never a permanent delete)
 
-## Prerequisites
+## Requirements
 
-- macOS, with Notes.app configured and its Automation permission granted to
-  whatever process runs this server (System Settings -> Privacy & Security ->
-  Automation)
+- macOS, with Notes.app configured
 - Python 3.11+
 
-## Install
+## Installation
 
 ```bash
+git clone https://github.com/nairamith/notes-mcp.git
+cd notes-mcp
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e .
 ```
 
-## Run the server
+The first time a tool is called, macOS will prompt you to grant Automation permission for Notes — accept it (or grant it in advance via **System Settings → Privacy & Security → Automation**).
+
+## Adding notes-mcp to Claude
+
+The server communicates over stdio, so any MCP-compatible client can launch it directly. Use the **absolute path** to the Python interpreter inside the virtual environment you just created — `<repo>/.venv/bin/python`.
+
+### Claude Code
 
 ```bash
-python -m notes_mcp.server
+claude mcp add notes-mcp -s user -- /absolute/path/to/notes-mcp/.venv/bin/python -m notes_mcp.server
 ```
 
-The process starts and waits on stdio for an MCP client to connect — this is
-expected; it will not print further output until a client interacts with it.
+`-s user` registers it globally so it's available in every project; use `-s project` instead to share it via that project's `.mcp.json`, or omit the flag for the current project only. Run `/mcp` inside Claude Code afterward to confirm it connected.
 
-## Verify
+### Claude Desktop
+
+Add an entry to `~/Library/Application Support/Claude/claude_desktop_config.json` (create the file if it doesn't exist):
+
+```json
+{
+  "mcpServers": {
+    "notes-mcp": {
+      "command": "/absolute/path/to/notes-mcp/.venv/bin/python",
+      "args": ["-m", "notes_mcp.server"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop, then check **Settings → Connectors** to confirm `notes-mcp` is connected.
+
+## Verify it's working
 
 Run the automated test suite:
 
 ```bash
+pip install -e ".[dev]"
 pytest tests/unit/ tests/contract/    # mocked backend + schema checks — always run
 pytest tests/integration/             # real Notes.app; auto-skips off-macOS or
                                        # without Notes.app/permission
 ```
 
-To call a tool manually, use the MCP Inspector (bundled with the `mcp` SDK's
-CLI extra). The Inspector requires **Node.js 18+** and, by default, launches
-the server via [`uv`](https://docs.astral.sh/uv/) — install both if you don't
-already have them (`node --version` / `uv --version` to check; older Node
-versions fail with a `node:fs/promises` import error):
+To exercise a tool manually without a full MCP client, use the MCP Inspector (bundled with the `mcp` SDK's CLI extra). It requires **Node.js 18+** and, by default, launches the server via [`uv`](https://docs.astral.sh/uv/) — install both if you don't already have them:
 
 ```bash
 pip install "mcp[cli]"
 mcp dev src/notes_mcp/server.py
 ```
 
-This opens the MCP Inspector in a browser. Connect, list tools, and invoke
-`list_folder_contents` with a real top-level folder name from your own Notes
-account, e.g. `{"folder_path": "Notes"}`. It should return that folder's
-actual subfolders and notes — this tool (like all seven) talks to your real
-Notes data, not stubbed output.
+This opens the MCP Inspector in a browser. Connect, list tools, and invoke `list_folder_contents` with a real top-level folder name from your own Notes account, e.g. `{"folder_path": "Notes"}` — it talks to your real Notes data, not stubbed output.
 
-## Project layout
+## Contributing
 
-```text
-src/notes_mcp/
-├── server.py                  # FastMCP server instance, stdio entrypoint, tool registration
-├── apple/
-│   ├── core.py                # backend: ls, grep, mkdir, mv, rm, cat, append
-│   │                          #   (rm implements real removal for notes —
-│   │                          #    archives via mkdir+mv; folders remain
-│   │                          #    an unimplemented stub)
-│   ├── exceptions.py          # exception hierarchy raised by core.py
-│   ├── schema.py               # Note/Folder/FolderListing data shapes
-│   └── jxa_scripts/            # one JXA script per backend operation
-└── tools/
-    ├── list_folder_contents.py # wraps apple.core.ls
-    ├── search_notes.py         # wraps apple.core.grep
-    ├── read_note.py            # wraps apple.core.cat
-    ├── create_note.py          # wraps apple.core.append
-    ├── update_note.py          # wraps apple.core.append; overwrite=True also
-    │                            # composes ls/mkdir/mv to archive-then-replace
-    ├── move_note.py             # wraps apple.core.mv (note path)
-    └── remove_note.py           # wraps apple.core.rm (note path)
+Issues and pull requests are welcome. This project was built using [spec-kit](https://github.com/github/spec-kit)'s spec-driven workflow — see `specs/` for each feature's spec, plan, and design decisions, and `.specify/memory/constitution.md` for the project's guiding principles (YAGNI, test-first, safe/reversible data operations).
 
-tests/
-├── contract/                   # MCP tool contract tests (schema/registration)
-├── unit/                       # unit tests (mocked backend)
-└── integration/                # tests against real Notes.app
-```
+## License
 
-See `specs/` for each feature's spec, plan, and other design documents.
+[MIT](LICENSE)

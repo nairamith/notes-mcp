@@ -17,8 +17,11 @@ def test_readme_documents_install_steps():
     assert "## Install" in _text()
 
 
-def test_readme_documents_run_steps():
-    assert "## Run the server" in _text()
+def test_readme_documents_claude_setup_steps():
+    text = _text()
+    assert "## Adding notes-mcp to Claude" in text
+    assert "claude mcp add" in text
+    assert "claude_desktop_config.json" in text
 
 
 def test_readme_documents_verification_steps():
