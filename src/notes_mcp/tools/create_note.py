@@ -6,7 +6,7 @@ to create a note in a folder most likely wants that folder to exist.
 """
 
 from notes_mcp.apple import core
-from notes_mcp.apple.core import AlreadyExistsError, Note, NotFoundError
+from notes_mcp.apple.core import AlreadyExistsError, Note
 
 
 def _ensure_folder_exists(folder_path: str) -> None:
@@ -32,8 +32,8 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
 
     Args:
         folder_path: `/`-delimited path to the folder the note is created
-            in. Created automatically (along with any missing intermediate
-            folders) if it doesn't exist yet.
+            in. Ensured to exist (creating it, and any missing
+            intermediate folders, first) before the note is created.
         name: The note's title.
         content: The note's initial content.
 
@@ -44,8 +44,5 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
         AmbiguousMatchError: A note named `name` already exists more than
             once in `folder_path`.
     """
-    try:
-        return core.append(folder_path, name, content)
-    except NotFoundError:
-        _ensure_folder_exists(folder_path)
-        return core.append(folder_path, name, content)
+    _ensure_folder_exists(folder_path)
+    return core.append(folder_path, name, content)

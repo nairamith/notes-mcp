@@ -133,11 +133,11 @@ of the others and can be worked on in parallel.
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
 - [X] T018 [P] [US4] Contract test: `create_note` is registered with input `{folder_path, name, content}` (all required strings) and output unwrapped as a `Note` object — in `tests/contract/test_create_note_contract.py` (depends on T003)
-- [X] T019 [P] [US4] Unit test: mocking `apple.core.append`/`apple.core.mkdir`, verify pass-through of the created `Note`, that `AmbiguousMatchError` propagates, and that a `NotFoundError` from `append` (missing folder) triggers `mkdir` for each missing path segment (in order, `AlreadyExistsError` swallowed) followed by a retried `append` — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
+- [X] T019 [P] [US4] Unit test: mocking `apple.core.append`/`apple.core.mkdir`, verify pass-through of the created `Note`, that `AmbiguousMatchError` propagates, and that `mkdir` is called for every path segment (in order, before `append`), with `AlreadyExistsError` swallowed regardless of whether that segment already existed — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
 
 ### Implementation for User Story 4
 
-- [X] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`: call `apple.core.append` directly; on `NotFoundError`, create every missing folder along `folder_path` via `apple.core.mkdir` (swallowing `AlreadyExistsError`), then retry `append` once
+- [X] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`: unconditionally ensure every folder along `folder_path` exists via `apple.core.mkdir` (swallowing `AlreadyExistsError` for segments that already exist — no existence check, no try/except around `append`), then call `apple.core.append` exactly once
 - [X] T021 [US4] Register `create_note` in `src/notes_mcp/server.py` (depends on T017, T020 — same file as T017, sequential)
 - [X] T020a [US4] (PR review amendment) Integration test confirming `create_note` creates a missing (including multi-level) folder path against real Notes.app — in `tests/integration/tools/test_create_note_integration.py`
 
