@@ -122,7 +122,11 @@ src/notes_mcp/
     ├── list_folder_contents.py     # new — wraps apple.core.ls
     ├── search_notes.py             # new — wraps apple.core.grep
     ├── read_note.py                # new — wraps apple.core.cat
-    ├── create_note.py              # new — wraps apple.core.append
+    ├── create_note.py              # new — wraps apple.core.append; if
+                                     #      folder_path doesn't exist, also
+                                     #      composes apple.core.mkdir to
+                                     #      create it (and any missing
+                                     #      intermediate folders) first
     └── update_note.py              # new — wraps apple.core.append; when
                                      #      overwrite=True, also composes
                                      #      apple.core.mkdir (archive folder,

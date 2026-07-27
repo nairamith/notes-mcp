@@ -126,19 +126,20 @@ of the others and can be worked on in parallel.
 
 ## Phase 6: User Story 4 - Create a note in a folder (Priority: P4)
 
-**Goal**: `create_note(folder_path, name, content)` creates a new note, via `apple.core.append`'s create-if-missing path.
+**Goal**: `create_note(folder_path, name, content)` creates a new note, via `apple.core.append`'s create-if-missing path. Amended (PR review): if `folder_path` doesn't exist yet, the tool creates it (and any missing intermediate folders) itself, via `apple.core.mkdir`, rather than failing with `NotFoundError`.
 
-**Independent Test**: Call the tool for a note that doesn't exist yet; confirm (via listing) it now exists and (via reading) its content matches exactly.
+**Independent Test**: Call the tool for a note that doesn't exist yet; confirm (via listing) it now exists and (via reading) its content matches exactly. Also: call it with a folder path that doesn't exist yet and confirm the folder is created and the note lands inside it.
 
 ### Tests for User Story 4 (MANDATORY) ⚠️
 
 - [X] T018 [P] [US4] Contract test: `create_note` is registered with input `{folder_path, name, content}` (all required strings) and output unwrapped as a `Note` object — in `tests/contract/test_create_note_contract.py` (depends on T003)
-- [X] T019 [P] [US4] Unit test: mocking `apple.core.append`, verify pass-through of the created `Note` and that `NotFoundError`/`AmbiguousMatchError` propagate — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
+- [X] T019 [P] [US4] Unit test: mocking `apple.core.append`/`apple.core.mkdir`, verify pass-through of the created `Note`, that `AmbiguousMatchError` propagates, and that a `NotFoundError` from `append` (missing folder) triggers `mkdir` for each missing path segment (in order, `AlreadyExistsError` swallowed) followed by a retried `append` — in `tests/unit/tools/test_create_note_unit.py` (depends on T002)
 
 ### Implementation for User Story 4
 
-- [X] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`, calling `apple.core.append` directly
+- [X] T020 [P] [US4] Implement `create_note(folder_path: str, name: str, content: str) -> Note` in `src/notes_mcp/tools/create_note.py`: call `apple.core.append` directly; on `NotFoundError`, create every missing folder along `folder_path` via `apple.core.mkdir` (swallowing `AlreadyExistsError`), then retry `append` once
 - [X] T021 [US4] Register `create_note` in `src/notes_mcp/server.py` (depends on T017, T020 — same file as T017, sequential)
+- [X] T020a [US4] (PR review amendment) Integration test confirming `create_note` creates a missing (including multi-level) folder path against real Notes.app — in `tests/integration/tools/test_create_note_integration.py`
 
 **Checkpoint**: User Stories 1-4 all work independently.
 

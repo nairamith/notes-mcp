@@ -1,25 +1,72 @@
-"""Unit test: create_note with mocked apple.core.append (US4)."""
+"""Unit test: create_note with mocked apple.core.append/mkdir (US4)."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from notes_mcp.apple.core import AmbiguousMatchError, Note, NotFoundError
+from notes_mcp.apple.core import AlreadyExistsError, AmbiguousMatchError, Note, NotFoundError
 from notes_mcp.tools.create_note import create_note
 
 
-def test_create_note_returns_append_result_as_is():
+def test_create_note_returns_append_result_as_is_when_folder_exists():
     expected = Note(id="1", name="n", folder_path="F")
-    with patch("notes_mcp.tools.create_note.core.append", return_value=expected) as mock_append:
+    with (
+        patch("notes_mcp.tools.create_note.core.append", return_value=expected) as mock_append,
+        patch("notes_mcp.tools.create_note.core.mkdir") as mock_mkdir,
+    ):
         result = create_note("F", "n", "content")
     mock_append.assert_called_once_with("F", "n", "content")
+    mock_mkdir.assert_not_called()
     assert result is expected
 
 
-def test_create_note_propagates_not_found_error():
-    with patch("notes_mcp.tools.create_note.core.append", side_effect=NotFoundError("nope")):
-        with pytest.raises(NotFoundError):
-            create_note("does/not/exist", "n", "content")
+def test_create_note_creates_missing_top_level_folder_then_retries_append():
+    expected = Note(id="1", name="n", folder_path="F")
+    with (
+        patch("notes_mcp.tools.create_note.core.append", side_effect=[NotFoundError("nope"), expected]) as mock_append,
+        patch("notes_mcp.tools.create_note.core.mkdir") as mock_mkdir,
+    ):
+        result = create_note("F", "n", "content")
+    mock_mkdir.assert_called_once_with("", "F")
+    assert mock_append.call_args_list == [call("F", "n", "content"), call("F", "n", "content")]
+    assert result is expected
+
+
+def test_create_note_creates_each_missing_intermediate_folder_in_order():
+    manager = MagicMock()
+    expected = Note(id="1", name="n", folder_path="A/B/C")
+    with (
+        patch(
+            "notes_mcp.tools.create_note.core.append",
+            side_effect=[NotFoundError("nope"), expected],
+        ) as mock_append,
+        patch("notes_mcp.tools.create_note.core.mkdir") as mock_mkdir,
+    ):
+        manager.attach_mock(mock_mkdir, "mkdir")
+        create_note("A/B/C", "n", "content")
+
+    assert manager.mock_calls == [
+        call.mkdir("", "A"),
+        call.mkdir("A", "B"),
+        call.mkdir("A/B", "C"),
+    ]
+
+
+def test_create_note_swallows_already_exists_for_a_partially_existing_path():
+    expected = Note(id="1", name="n", folder_path="A/B")
+    with (
+        patch(
+            "notes_mcp.tools.create_note.core.append",
+            side_effect=[NotFoundError("nope"), expected],
+        ),
+        patch(
+            "notes_mcp.tools.create_note.core.mkdir",
+            side_effect=[AlreadyExistsError("already there"), None],
+        ) as mock_mkdir,
+    ):
+        result = create_note("A/B", "n", "content")
+    assert mock_mkdir.call_args_list == [call("", "A"), call("A", "B")]
+    assert result is expected
 
 
 def test_create_note_propagates_ambiguous_match_error():

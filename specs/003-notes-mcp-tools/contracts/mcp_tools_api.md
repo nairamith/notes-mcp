@@ -52,16 +52,20 @@ Wraps `apple.core.cat`.
 ## `create_note(folder_path: str, name: str, content: str) -> Note`
 
 Wraps `apple.core.append` (its create-if-missing path is the intended use
-here; see the note below on ambiguity).
+here; see the note below on ambiguity). If `folder_path` doesn't exist yet,
+`create_note` creates it first (and any missing intermediate folders along
+the path, via repeated `apple.core.mkdir` calls) rather than failing —
+amendment, since a caller asking to create a note in a folder most likely
+wants that folder to exist, not a `NotFoundError`.
 
 - **Input schema**: `folder_path`, `name`, `content` — all strings,
   required.
 - **Output**: **Not** wrapped — the structured content is the created
   `Note` directly: `{"id", "name", "folder_path"}`.
-- **Errors**: `NotFoundError` if `folder_path` doesn't exist;
-  `AmbiguousMatchError` if a note named `name` already exists more than
-  once in `folder_path` (inherited from `append`'s contract — see note
-  below).
+- **Errors**: `AmbiguousMatchError` if a note named `name` already exists
+  more than once in `folder_path` (inherited from `append`'s contract —
+  see note below). `folder_path` not existing is no longer an error case
+  (see above).
 
 ## `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note`
 

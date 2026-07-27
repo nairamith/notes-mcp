@@ -18,6 +18,10 @@
 
 - Q: Should `update_note` gain an explicit overwrite mode, in addition to its existing append-only behavior? → A: Yes — a boolean flag (default `false`, preserving today's append-only behavior). When `true` and a note already exists: archive the existing note (move it into a single, well-known top-level "archive" folder, auto-created on first use, name unchanged) rather than deleting it, then create a fresh note with the new content in the original location. This composes the already-existing `mv`/`append`/`mkdir` backend primitives at the tool layer; it does not require a new backend capability. If no note exists yet, the flag has no effect — a fresh note is simply created either way, matching `create_note`. If the target name is already ambiguous (more than one existing note), the tool still refuses rather than guessing, regardless of the flag.
 
+### Session 2026-07-27 (amendment 2 — PR review)
+
+- Q: Should `create_note` fail when `folder_path` doesn't exist yet, or create it? → A: Create it (and any missing intermediate folders along the path) rather than failing — a caller asking to create a note in a folder most likely wants that folder to exist, not a `NotFoundError`. Handled entirely within the tool itself, composing the existing `mkdir` backend capability; no new backend capability needed.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - List the contents of a folder (Priority: P1)
@@ -119,9 +123,10 @@ content is exactly what was given.
 1. **Given** a folder that exists and no note by the given name in it,
    **When** the tool is called with a name and content, **Then** a new
    note with that name and content exists in that folder afterward.
-2. **Given** a folder path that doesn't exist, **When** the tool is
-   called, **Then** it returns a clear, structured error rather than
-   creating the note somewhere unexpected.
+2. **Given** a folder path that doesn't exist yet, **When** the tool is
+   called, **Then** the folder (and any missing intermediate folders
+   along its path) is created automatically, and the note is created
+   inside it as normal — never a `NotFoundError` for a missing folder.
 
 ---
 
@@ -217,8 +222,11 @@ original content intact — is now there instead of gone.
 - **FR-003**: The system MUST provide an MCP tool that returns a single
   note's content, backed by the existing `cat` backend capability.
 - **FR-004**: The system MUST provide an MCP tool that creates a new note
-  with given content in a given, existing folder, backed by the existing
-  `append` backend capability's create-if-missing behavior.
+  with given content in a given folder, backed by the existing `append`
+  backend capability's create-if-missing behavior. If the given folder
+  (or any folder along its path) doesn't exist yet, the tool MUST create
+  it automatically, composing the existing `mkdir` backend capability,
+  rather than failing.
 - **FR-005**: The system MUST provide an MCP tool that, by default, adds
   content to an existing note — or creates it first if no note by that
   name exists yet in the given folder — backed by the existing `append`
@@ -290,7 +298,9 @@ original content intact — is now there instead of gone.
 - **SC-002**: Every tool call that targets something that doesn't exist
   (a missing folder or note) returns a clear, structured error 100% of
   the time — never a crash, and never an empty result indistinguishable
-  from "found nothing."
+  from "found nothing" — except `create_note`, whose one deliberate
+  exception is a missing folder, which it creates automatically instead
+  of erroring (FR-004).
 - **SC-003**: A note created via the create tool, or updated via the
   update tool, is visible with its expected content via the listing and
   reading tools immediately afterward, with no delay or extra steps.
