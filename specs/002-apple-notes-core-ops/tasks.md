@@ -49,10 +49,10 @@ Dependencies & Execution Order below.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Define the exception hierarchy in `src/notes_mcp/apple/core.py`: `AppleNotesError` (base), `NotFoundError`, `AlreadyExistsError`, `InvalidPatternError`, `AutomationPermissionError`, `NotImplementedYetError` (per contracts/apple_core_api.md) (depends on T001)
+- [ ] T003 Define the exception hierarchy in `src/notes_mcp/apple/core.py`: `AppleNotesError` (base), `NotFoundError`, `AlreadyExistsError`, `InvalidPatternError`, `AutomationPermissionError`, `NotImplementedYetError`, `AmbiguousMatchError` (per contracts/apple_core_api.md) (depends on T001)
 - [ ] T004 Implement the private `_run_jxa(script: str, args: list[str])` helper in `src/notes_mcp/apple/core.py`: invokes `osascript -l JavaScript -e SCRIPT -- args...` via `subprocess`, passes arguments through argv (never string-interpolated, per research.md §1), parses JSON stdout, classifies failures (including `osascript`'s `-1743` permission error) into the exceptions from T003, and logs the call's outcome/duration via stdlib `logging` (depends on T003)
 - [ ] T005 [P] Unit test for `_run_jxa`'s error classification — mocked `subprocess.run` covering a successful JSON response, a `-1743` permission failure, and a generic failure — in `tests/unit/apple/test_core_unit.py` (depends on T004)
-- [ ] T006 [P] Create `tests/integration/apple/conftest.py` with: a `notes_available` fixture/marker that skips tests when not on macOS or Notes.app isn't scriptable; a `scratch_folder` fixture that creates a dedicated top-level test folder directly via `_run_jxa` (bypassing `mkdir`/`rm`, since those are themselves under test) and removes it after the test session; and a `seed_note(folder_path, name, body)` helper that creates a note directly via `_run_jxa` (since no function in this feature's scope creates notes) for tests to seed fixture data (depends on T004)
+- [ ] T006 [P] Create `tests/integration/apple/conftest.py` with: a `notes_available` fixture/marker that skips tests when not on macOS or Notes.app isn't scriptable; a `scratch_folder` fixture that creates a dedicated top-level test folder directly via `_run_jxa` (bypassing `mkdir`/`rm`, since those are themselves under test) and removes it after the test session; and a `seed_note(folder_path, name, body)` helper that creates a note directly via `_run_jxa` (since no function in this feature's scope creates notes except `append`'s own create path, which tests shouldn't rely on to set up their own fixtures) for tests to seed fixture data (depends on T004)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -150,16 +150,55 @@ Dependencies & Execution Order below.
 
 - [ ] T020 [US5] Implement `rm(kind: Literal["note","folder"], identifier: str) -> NoReturn` in `src/notes_mcp/apple/core.py`: immediately raises `NotImplementedYetError`, no Notes interaction whatsoever (depends on T004)
 
-**Checkpoint**: All five capabilities are independently functional.
+**Checkpoint**: User Stories 1-5 are independently functional.
 
 ---
 
-## Phase 8: Polish & Cross-Cutting Concerns
+## Phase 8: User Story 6 - Read a note's content (Priority: P6)
+
+**Goal**: `cat(note_id)` returns the plain-text content of an existing note.
+
+**Independent Test**: Seed a note with known content, `cat` its id and confirm the exact content is returned; `cat` a nonexistent id and confirm a clear error.
+
+### Tests for User Story 6 (MANDATORY) ⚠️
+
+- [ ] T021 [P] [US6] Integration test: `cat` returns the exact content of a `seed_note`-created note — in `tests/integration/apple/test_core_integration.py` (depends on T006; same file as prior integration tests, sequential)
+- [ ] T022 [P] [US6] Unit test: `cat` raises `NotFoundError` for a note id that doesn't exist, using a mocked `_run_jxa` "not found" response — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+
+### Implementation for User Story 6
+
+- [ ] T023 [US6] Implement `cat(note_id: str) -> str` in `src/notes_mcp/apple/core.py` (depends on T004)
+
+**Checkpoint**: User Stories 1-6 are independently functional.
+
+---
+
+## Phase 9: User Story 7 - Append to a note, creating it if it doesn't exist (Priority: P7)
+
+**Goal**: `append(folder_path, name, text)` appends text to an existing note, or creates a new empty note first if none named `name` exists yet in `folder_path`; fails clearly if the name is ambiguous.
+
+**Independent Test**: Call `append` against a folder/name with no matching note; confirm (via `ls`) exactly one note was created and (via `cat`) it contains exactly the given text. Call `append` again on that note with more text; confirm (via `cat`) both the original and new text are present.
+
+### Tests for User Story 7 (MANDATORY) ⚠️
+
+- [ ] T024 [US7] Integration test: `append` against a folder/name with no existing match creates exactly one new note (verified via `ls`) whose content (verified via `cat`) is exactly the given text, with no leading separator (research.md §6a) — in `tests/integration/apple/test_core_integration.py` (depends on T006, T009, T023; same file as prior integration tests, sequential)
+- [ ] T025 [US7] Integration test: `append` to a `seed_note`-created note with existing content results in content (verified via `cat`) containing the original text, a newline, then the newly appended text — in `tests/integration/apple/test_core_integration.py` (depends on T006, T023; same file as T024, sequential)
+- [ ] T026 [P] [US7] Unit test: `append` raises `AmbiguousMatchError` when a mocked `_run_jxa` response reports more than one note matching `(folder_path, name)`, and `NotFoundError` when `folder_path` doesn't exist — in `tests/unit/apple/test_core_unit.py` (depends on T004)
+
+### Implementation for User Story 7
+
+- [ ] T027 [US7] Implement `append(folder_path: str, name: str, text: str) -> Note` in `src/notes_mcp/apple/core.py`: look up notes named `name` in `folder_path`; raise `AmbiguousMatchError` if more than one match; if none, create a new empty note there first; append `text` (newline-separated if the note already had content, per research.md §6a) (depends on T004)
+
+**Checkpoint**: All seven capabilities are independently functional.
+
+---
+
+## Phase 10: Polish & Cross-Cutting Concerns
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T021 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-005
-- [ ] T022 Review `src/notes_mcp/apple/core.py` for consistent naming/docstrings, confirm every function logs per the Observability principle, and remove any dead code
+- [ ] T028 [P] Run `quickstart.md` validation end-to-end on a real macOS machine with Notes configured, confirming SC-001 through SC-007
+- [ ] T029 Review `src/notes_mcp/apple/core.py` for consistent naming/docstrings, confirm every function logs per the Observability principle, and remove any dead code
 
 ---
 
@@ -170,16 +209,17 @@ Dependencies & Execution Order below.
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
 - **User Stories (Phase 3+)**: All depend on Foundational phase completion
-  - User Story 3's success test (T013) and User Story 4 (T016) depend on User Story 1's `ls` (T009) for verification, per the spec's own Independent Test wording — these stories are not fully parallel-independent for this reason
+  - User Story 3's success test (T013), User Story 4 (T016), and User Story 7 (T024) depend on User Story 1's `ls` (T009) for verification, per the spec's own Independent Test wording — these stories are not fully parallel-independent for this reason
   - User Story 4 (T016) also depends on User Story 3's `mkdir` (T015) to create a folder to move/rename
-  - User Story 5 has no dependency on any other story's implementation
+  - User Story 7 (T024, T025) depends on User Story 6's `cat` (T023) to verify its own effects
+  - User Story 5 and User Story 6 have no dependency on any other story's implementation
 - **Polish (Final Phase)**: Depends on all desired user stories being complete
 
 ### Same-File Sequencing (overrides story-parallel opportunities)
 
-- All of `src/notes_mcp/apple/core.py` (T003, T004, T009, T012, T015, T018, T020) must be edited sequentially, in that order, regardless of which story they belong to
-- All of `tests/unit/apple/test_core_unit.py` (T005, T008, T011, T017, T019) must be edited sequentially
-- All of `tests/integration/apple/test_core_integration.py` (T007, T010, T013, T014, T016) must be edited sequentially
+- All of `src/notes_mcp/apple/core.py` (T003, T004, T009, T012, T015, T018, T020, T023, T027) must be edited sequentially, in that order, regardless of which story they belong to
+- All of `tests/unit/apple/test_core_unit.py` (T005, T008, T011, T017, T019, T022, T026) must be edited sequentially
+- All of `tests/integration/apple/test_core_integration.py` (T007, T010, T013, T014, T016, T021, T024, T025) must be edited sequentially
 - `tests/integration/apple/conftest.py` (T006) has no same-file conflicts with the above
 
 ### Within Each User Story
@@ -196,7 +236,9 @@ Dependencies & Execution Order below.
 - T010 (integration file) and T011 (unit file) can run in parallel
 - T017 (unit file) can run in parallel with T016 (integration file)
 - T019 (unit file) has no same-phase file conflict
-- T021 (Polish) can run in parallel with T022
+- T021 (integration file) and T022 (unit file) can run in parallel
+- T026 (unit file) can run in parallel with T024/T025 (integration file)
+- T028 (Polish) can run in parallel with T029
 
 ---
 
@@ -228,7 +270,9 @@ Task: "Unit test: ls raises NotFoundError for a nonexistent folder in tests/unit
 4. Add User Story 3 (`mkdir`) → Validate independently (uses `ls` to verify)
 5. Add User Story 4 (`mv`) → Validate independently (uses `mkdir` + `ls`)
 6. Add User Story 5 (`rm` stub) → Validate independently
-7. Each story adds value without breaking previous stories
+7. Add User Story 6 (`cat`) → Validate independently
+8. Add User Story 7 (`append`) → Validate independently (uses `cat` + `ls`)
+9. Each story adds value without breaking previous stories
 
 ---
 
@@ -244,5 +288,11 @@ Task: "Unit test: ls raises NotFoundError for a nonexistent folder in tests/unit
 - Integration tests seed their own fixture data (`seed_note`, direct
   `_run_jxa` subfolder creation) rather than using the functions under
   test to set themselves up — this avoids circular test dependencies
-  (e.g. testing `mkdir` using `mkdir`) and keeps each story's tests from
-  secretly depending on another story's implementation being correct
+  (e.g. testing `mkdir` using `mkdir`, or testing `append`'s create path
+  using `append` itself to seed a pre-existing note) and keeps each
+  story's tests from secretly depending on another story's implementation
+  being correct
+- `append` (US7) is this feature's first production capability that can
+  create a *note* (`mkdir`, US3, only creates folders) — see research.md
+  §8's note on why test fixtures still use `seed_note` rather than
+  `append` for that purpose

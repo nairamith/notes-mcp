@@ -71,6 +71,44 @@ scheme.
 rejected — still ambiguous whenever two notes in the same folder share a
 title, which is common (e.g., several blank/untitled notes).
 
+## 3a. `cat` / `append` addressing (asymmetric by design)
+
+**Decision**: `cat` addresses its target the same way as `mv`/`rm` — by
+the note's `id` — since it only ever reads a note already known to exist
+(typically obtained from `ls`/`grep`). `append`, by contrast, addresses
+its target by `(folder_path, name)`, not `id`. If no note with that name
+exists in that folder, `append` creates one (empty) first, then appends.
+If more than one note already has that name in that folder, `append`
+raises `AmbiguousMatchError` (see §7) rather than guessing which to
+modify.
+
+**Rationale**: `append` must support "create it if it doesn't exist" per
+the spec — and a note that doesn't exist yet has no `id` to address it by,
+so id-based addressing is impossible for `append`'s create path. A
+folder+name pair is the only address that can name a not-yet-existing
+note. This makes `cat` and `append` deliberately asymmetric in how they
+take a target, but each asymmetry is driven by what that specific function
+needs to do, not an accidental inconsistency: `cat` never creates
+anything, so it can stay on the same unambiguous `id` scheme as `mv`/`rm`;
+`append` sometimes creates, so it must use an address that still means
+something before the note exists. Refusing to guess on an ambiguous
+folder+name match (rather than silently picking, say, "the first match")
+keeps `append` from ever mutating the wrong note — consistent with the
+constitution's bias against implicit behavior on destructive/mutating
+paths.
+
+**Alternatives considered**:
+- Make `append` also take an `id`, with a separate `folder_path`+`name`
+  pair used only when creating: rejected — this produces two different
+  call shapes for what the spec describes as one operation ("append; if
+  missing, create then append"), adding a branchy signature for no benefit
+  over a single folder+name address.
+- Make `append` silently use the first match when a name is ambiguous:
+  rejected — silently mutating one of several same-named notes when the
+  caller can't tell which is a real risk of corrupting the wrong note's
+  content, which this project's Safe Operations bias explicitly guards
+  against even outside the `rm`/deletion context.
+
 ## 4. `mv` / `rm` target disambiguation
 
 **Decision**: Both functions take an explicit `kind: Literal["note",
@@ -130,6 +168,30 @@ faster than one round trip per note, which is necessary to meet SC-002's
 as the well-known AppleScript/JXA performance antipattern that would risk
 missing SC-002 entirely on larger folders.
 
+## 6a. `append` write semantics
+
+**Decision**: `append(folder_path, name, text)` inserts a newline before
+`text` when the target note already has content, so the new text never
+runs directly into the end of the existing content. When `append` creates
+a brand-new (previously empty) note, `text` becomes its content with no
+leading newline.
+
+**Rationale**: A simple, predictable rule that matches how appending a
+line to a text file normally behaves, and guarantees SC-006 (prior content
+is always preserved and the new text is always distinguishable from it)
+without needing any richer formatting model. `cat`'s return value is the
+note's plain content — no metadata is added to mark where an append
+occurred, keeping `cat`'s contract simple (it returns exactly what's
+there, not an annotated view of it).
+
+**Alternatives considered**: Concatenating with no separator: rejected —
+would silently merge the end of existing content with the start of new
+text (e.g. `"buy milk" + "buy eggs"` → `"buy milkbuy eggs"`), which is
+surprising and loses information about where one entry ends and the next
+begins. A configurable separator: rejected as unnecessary flexibility for
+what the spec describes as a simple append (YAGNI) — can be added later if
+a real need for it appears.
+
 ## 7. Error handling
 
 **Decision**: A small, flat exception hierarchy, all defined in
@@ -141,6 +203,8 @@ missing SC-002 entirely on larger folders.
 - `AutomationPermissionError` — macOS hasn't granted Notes automation
   permission yet (`osascript` error `-1743`)
 - `NotImplementedYetError` — raised by the `rm` stub, always
+- `AmbiguousMatchError` — `append`'s `(folder_path, name)` matches more
+  than one existing note (§3a)
 
 Errors are classified from `osascript`'s exit code/stderr (and, where the
 JXA script itself detects the problem — e.g., "no folder named X" — from a
@@ -166,9 +230,10 @@ which fails the "actionable error" requirement and couples every caller to
 - **Unit** (`tests/unit/apple/`): pure logic that needs no real Notes
   access — `rm`'s stub behavior (always raises, touches nothing),
   `grep`'s invalid-pattern rejection, `mv`/`rm`'s `kind`/`identifier`
-  validation.
+  validation, `cat`'s not-found classification (mocked).
 - **Integration** (`tests/integration/apple/`): `ls`, `grep`, `mkdir`,
-  `mv` exercised against a real, dedicated, clearly-named scratch folder
+  `mv`, `cat`, `append` exercised against a real, dedicated, clearly-named
+  scratch folder
   (e.g. a single top-level folder reserved for this test suite) created
   fresh and cleaned up per test session — never the developer's/user's
   other personal folders. These tests are automatically skipped when not
@@ -192,6 +257,14 @@ automation calls are correct, which is the part most likely to break
 across macOS/Notes versions; real integration coverage (even if narrower
 and skippable) is required by the constitution for anything touching Notes
 data.
+
+**Note**: `append`'s create-if-missing path is this feature's first
+production capability that creates a *note* (only `mkdir` created
+*folders* before). Integration tests still seed pre-existing notes via the
+`seed_note` test helper (direct JXA, bypassing the functions under test)
+rather than via `append`, to avoid testing `append` using `append`; only
+the test that specifically exercises `append`'s create-if-missing
+behavior relies on `append` itself doing the creating.
 
 ## 9. macOS Automation permission (operational note, not a design decision)
 

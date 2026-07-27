@@ -153,6 +153,65 @@ succeeding or behaving unpredictably.
 
 ---
 
+### User Story 6 - Read a note's content (Priority: P6)
+
+As a developer building on this backend, I want a function that returns a
+note's content, so that I can read what's actually inside a note I found
+via listing or searching.
+
+**Why this priority**: Read-only and as safe as listing/searching, but
+added to the API surface after the original five — it naturally follows
+searching (find a note, then read it) and is needed before appending can
+be meaningfully verified.
+
+**Independent Test**: Identify a note with known content, call the read
+function with it, and confirm the exact content is returned.
+
+**Acceptance Scenarios**:
+
+1. **Given** a note that exists and has content, **When** the read
+   function is called on it, **Then** it returns exactly that note's
+   content.
+2. **Given** a note that does not exist, **When** the read function is
+   called on it, **Then** it fails with a clear error rather than
+   returning empty content or crashing.
+
+---
+
+### User Story 7 - Append to a note, creating it if it doesn't exist (Priority: P7)
+
+As a developer building on this backend, I want a function that appends
+text to a note identified by its folder and name — creating an empty note
+there first if none exists yet — so that automation can add content
+without first having to check whether the note exists and branch on it.
+
+**Why this priority**: The only capability here that can both create and
+modify content in a single call, combining the additive risk of folder
+creation with the modifying risk of move/rename; placed last since
+verifying its effects relies on the read and listing capabilities (US1,
+US6) already being in place.
+
+**Independent Test**: Call the append function against a folder/name with
+no matching note yet; confirm (via listing) a new note was created there
+and (via reading) it now contains exactly the appended text. Call it again
+against that same note with more text; confirm (via reading) the note now
+contains both the original and newly appended text, with nothing lost.
+
+**Acceptance Scenarios**:
+
+1. **Given** no note named `name` exists in a given folder, **When** the
+   append function is called with text, **Then** a new note is created
+   there and its content is exactly that text.
+2. **Given** a note named `name` already exists in a given folder with
+   existing content, **When** the append function is called with more
+   text, **Then** the note's content afterward contains both the original
+   and the newly appended text, with the original content preserved.
+3. **Given** more than one note named `name` already exists in the same
+   folder, **When** the append function is called, **Then** it fails with
+   a clear error rather than guessing which note to modify.
+
+---
+
 ### Edge Cases
 
 - What happens when the listing or search function is called against a
@@ -164,6 +223,12 @@ succeeding or behaving unpredictably.
 - What happens when `grep` is given an invalid regular-expression pattern?
 - What happens when `rm` (the stub) is called repeatedly on the same
   target — does it consistently signal "not implemented" every time?
+- What happens when the read function (`cat`) is called on a note that
+  doesn't exist?
+- What happens when the append function's folder/name matches more than
+  one existing note?
+- What happens when the append function is called against a folder that
+  doesn't exist at all?
 
 ## Requirements *(mandatory)*
 
@@ -196,19 +261,33 @@ succeeding or behaving unpredictably.
   Apple Notes' recoverable-deletion mechanism and how it handles non-empty
   folders — is explicitly deferred to a future feature and is out of scope
   here (see Clarifications).
-- **FR-008**: `ls` and `grep` MUST be read-only — calling them MUST NOT
-  change any Notes data. `rm`, as a stub (FR-006), is likewise read-only in
-  effect for this feature, even though it is conceptually the removal
-  capability.
-- **FR-009**: Each of `ls`, `grep`, `mkdir`, `mv`, and `rm` MUST have an
-  automated test covering its behavior, per this project's Test-First
-  principle — for `rm`, this means testing that it consistently signals
-  "not implemented" and never mutates real data.
-- **FR-010**: `ls`, `grep`, `mkdir`, and `mv` operate on real Apple Notes
-  data through the platform's supported automation surface (not a mock or
-  simulated store), consistent with this project's Platform & Integration
-  Constraints. `rm` does not touch Notes data at all in this feature, since
-  it is a stub (FR-006).
+- **FR-008**: `ls`, `grep`, and `cat` MUST be read-only — calling them
+  MUST NOT change any Notes data. `rm`, as a stub (FR-006), is likewise
+  read-only in effect for this feature, even though it is conceptually the
+  removal capability.
+- **FR-009**: Each of `ls`, `grep`, `mkdir`, `mv`, `cat`, `append`, and
+  `rm` MUST have an automated test covering its behavior, per this
+  project's Test-First principle — for `rm`, this means testing that it
+  consistently signals "not implemented" and never mutates real data; for
+  `append`, this includes both its create-if-missing path and its
+  ambiguous-match error path (FR-013).
+- **FR-010**: `ls`, `grep`, `mkdir`, `mv`, `cat`, and `append` operate on
+  real Apple Notes data through the platform's supported automation
+  surface (not a mock or simulated store), consistent with this project's
+  Platform & Integration Constraints. `rm` does not touch Notes data at
+  all in this feature, since it is a stub (FR-006).
+- **FR-011**: The backend MUST provide a read capability (`cat`) that
+  returns the content of a single, existing note; it MUST fail with a
+  clear error if the note does not exist.
+- **FR-012**: The backend MUST provide an append capability (`append`)
+  that appends text to the content of the note identified by a given
+  folder and name. If no note with that name exists in that folder yet,
+  it MUST first create a new, empty note there, then append the text to
+  it — a single call always results in the text being present, whether or
+  not the note pre-existed.
+- **FR-013**: `append` MUST fail with a clear error — rather than
+  silently choosing one — if more than one note already named `name`
+  exists in the given folder.
 
 ### Key Entities
 
@@ -238,6 +317,12 @@ succeeding or behaving unpredictably.
 - **SC-005**: Calling `rm` never changes what a subsequent listing shows —
   100% of `rm` calls during this feature leave Notes data exactly as it was
   beforehand, and consistently signal that removal isn't implemented yet.
+- **SC-006**: Reading a note's content immediately after appending to it
+  always reflects the newly appended text with all prior content intact —
+  no appended call ever loses existing content.
+- **SC-007**: Calling `append` against a folder/name with no existing
+  match results in exactly one note existing there afterward (verified by
+  listing), never zero and never more than one.
 
 ## Assumptions
 
@@ -262,3 +347,16 @@ succeeding or behaving unpredictably.
   feature only reserves its interface as a stub (per Clarifications).
 - `grep` uses the target platform's/language's standard regular-expression
   support; no custom pattern language is introduced.
+- `cat` addresses a note the same way `mv`/`rm` do — by its stable id —
+  since it only ever reads a note that's already known to exist (typically
+  found via `ls`/`grep` first).
+- `append` addresses its target by `(folder_path, name)` instead of an id.
+  This is a deliberate asymmetry with `cat`/`mv`/`rm`, not an
+  inconsistency: `append` can create a note that doesn't exist yet, and a
+  not-yet-existing note has no id to address it by — a folder+name pair is
+  the only address that makes sense before the note exists. When that
+  folder+name already matches more than one note, `append` fails rather
+  than guessing (FR-013), so it never silently modifies the wrong note.
+- `append` separates newly appended text from a note's existing content
+  with a newline, so appended text never runs directly into prior content;
+  a freshly created note's first `append` has no leading newline.

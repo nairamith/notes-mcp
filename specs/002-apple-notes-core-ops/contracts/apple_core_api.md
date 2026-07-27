@@ -20,6 +20,8 @@ All defined in `apple/core.py`:
   Notes automation permission yet.
 - `NotImplementedYetError(AppleNotesError)` — raised by `rm`, always, in
   this feature.
+- `AmbiguousMatchError(AppleNotesError)` — `append`'s `(folder_path,
+  name)` matches more than one existing note.
 
 ## `ls(folder_path: str) -> FolderListing`
 
@@ -78,6 +80,30 @@ Stub for this feature (FR-006/FR-007). **Always raises**
 real note/folder, and never touches Notes data. Real removal behavior
 (recoverable deletion, non-empty-folder policy) is deferred to a future
 feature.
+
+## `cat(note_id: str) -> str`
+
+Returns the plain-text content of the note identified by `note_id`.
+
+- **Raises** `NotFoundError` if no note with `note_id` exists.
+- **Read-only**: never changes any Notes data (FR-008/FR-011).
+
+## `append(folder_path: str, name: str, text: str) -> Note`
+
+Appends `text` to the content of the note named `name` inside
+`folder_path`. If no such note exists yet, first creates a new, empty note
+there, then appends `text` to it (so its resulting content is exactly
+`text`, with no leading separator — see research.md §6a). If the note
+already has content, `text` is appended after a newline separator,
+preserving everything already there.
+
+- **Raises** `NotFoundError` if `folder_path` does not exist.
+- **Raises** `AmbiguousMatchError` if more than one note named `name`
+  already exists in `folder_path` (FR-013) — `append` never guesses which
+  one to modify.
+- Returns the resulting `Note` (its `id`, `name`, `folder_path` — not its
+  content; use `cat` to read the content back).
+- Never removes or overwrites existing content (FR-012, SC-006).
 
 ## Cross-cutting guarantees (all functions)
 

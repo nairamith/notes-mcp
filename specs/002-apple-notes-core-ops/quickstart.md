@@ -1,7 +1,7 @@
 # Quickstart: Apple Notes Core Backend Operations
 
-Validates User Stories 1-5 end-to-end: `ls`, `grep`, `mkdir`, and `mv`
-against real Apple Notes data, and `rm`'s stub behavior.
+Validates User Stories 1-7 end-to-end: `ls`, `grep`, `mkdir`, `mv`, `cat`,
+and `append` against real Apple Notes data, and `rm`'s stub behavior.
 
 ## Prerequisites
 
@@ -57,6 +57,27 @@ ls("Notes")  # renamed folder appears; old name is gone
 
 Confirm each result's shape matches [contracts/apple_core_api.md](./contracts/apple_core_api.md)
 and [data-model.md](./data-model.md).
+
+## Manually validate read and append (US6-US7)
+
+```python
+from notes_mcp.apple.core import cat, append, ls
+
+# US7: append to a note that doesn't exist yet — it gets created
+note = append("Notes/quickstart-scratch-renamed", "shopping-list", "milk")
+cat(note.id)  # -> "milk"
+
+# US7 again: append to the same note — prior content is preserved
+append("Notes/quickstart-scratch-renamed", "shopping-list", "eggs")
+cat(note.id)  # -> "milk\neggs"
+
+# US6: list shows exactly one note was created, not duplicated
+ls("Notes/quickstart-scratch-renamed")
+```
+
+Expected: after the first `append`, `cat` returns exactly `"milk"`; after
+the second, it returns `"milk\neggs"` with nothing lost (SC-006); `ls`
+shows exactly one `shopping-list` note the whole time (SC-007).
 
 ## Manually validate the `rm` stub (US5)
 

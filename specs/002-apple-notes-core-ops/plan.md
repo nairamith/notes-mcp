@@ -6,16 +6,19 @@
 
 ## Summary
 
-Build a small backend module, `apple/core.py`, exposing five functions —
-`ls`, `grep`, `mkdir`, `mv`, `rm` — that operate on real Apple Notes data
-through macOS's officially sanctioned automation surface (JavaScript for
-Automation, via `osascript`). No new dependency is introduced: `osascript`
-ships with macOS, and all argument passing, JSON parsing, and regex
-matching use the Python standard library. `rm` is a deliberate stub this
-round (per Clarifications) — it reserves its call signature but performs
-no real deletion, deferring recoverable-deletion and non-empty-folder
-policy to a future feature. Not wired to any MCP tool in this feature, per
-the spec's explicit scope boundary.
+Build a small backend module, `apple/core.py`, exposing seven functions —
+`ls`, `grep`, `mkdir`, `mv`, `rm`, `cat`, `append` — that operate on real
+Apple Notes data through macOS's officially sanctioned automation surface
+(JavaScript for Automation, via `osascript`). No new dependency is
+introduced: `osascript` ships with macOS, and all argument passing, JSON
+parsing, and regex matching use the Python standard library. `rm` is a
+deliberate stub this round (per Clarifications) — it reserves its call
+signature but performs no real deletion, deferring recoverable-deletion
+and non-empty-folder policy to a future feature. `append` both writes and,
+when needed, creates a note (find-or-create by folder+name), which is why
+it addresses its target differently than `cat`/`mv`/`rm` (see research.md
+§3a). Not wired to any MCP tool in this feature, per the spec's explicit
+scope boundary.
 
 ## Technical Context
 
@@ -63,10 +66,10 @@ thousands+, of notes/folders), consistent with SC-002.
 
 | Principle | Status | Notes |
 |---|---|---|
-| I. Simplicity & YAGNI | PASS | One file, five functions, one small shared JXA-invocation helper (justified: all five functions need it right now, not a hypothetical future need). `rm` deliberately stays a stub rather than guessing at unimplemented policy. |
-| II. Test-First, Test-Always | PASS (with a documented practical adaptation) | Every function gets a test. Apple Notes has no official sandbox/test-double API, so real Notes-touching tests run against a dedicated, clearly-named scratch test folder (not the user's real personal folders) and are skipped automatically off-macOS or without Notes.app — this is the project's concrete interpretation of "a sandboxed Notes environment." `rm`'s test needs no Notes access at all. |
+| I. Simplicity & YAGNI | PASS | One file, seven functions, one small shared JXA-invocation helper (justified: all seven functions need it right now, not a hypothetical future need). `rm` deliberately stays a stub rather than guessing at unimplemented policy; `append`'s find-or-create behavior is exactly what was asked for, not a speculative extra mode. |
+| II. Test-First, Test-Always | PASS (with a documented practical adaptation) | Every function gets a test. Apple Notes has no official sandbox/test-double API, so real Notes-touching tests run against a dedicated, clearly-named scratch test folder (not the user's real personal folders) and are skipped automatically off-macOS or without Notes.app — this is the project's concrete interpretation of "a sandboxed Notes environment." `rm`'s test needs no Notes access at all. `append`'s create-if-missing and ambiguous-match paths are both explicitly tested (FR-009/FR-013). |
 | III. MCP Contract Integrity | N/A | Explicitly not wired to any MCP tool in this feature (spec Assumptions); applies when a future feature exposes these as tools. |
-| IV. Safe, Reversible Data Operations | PASS | The only potentially destructive capability, `rm`, is a no-op stub this round — zero destructive risk. `mv` relocates/renames but never destroys content. `ls`/`grep` are read-only per FR-008. |
+| IV. Safe, Reversible Data Operations | PASS | The only potentially destructive capability, `rm`, is a no-op stub this round — zero destructive risk. `mv` relocates/renames but never destroys content. `append` only adds — it never overwrites or removes existing note content (SC-006), and refuses to guess when its target name is ambiguous (FR-013) rather than risk mutating the wrong note. `ls`/`grep`/`cat` are read-only per FR-008. |
 | V. Observability & Debuggability | PASS | Each function logs its name, outcome, and duration via stdlib `logging` (same pattern as the existing `list_folders` tool); automation failures (including permission-not-granted) are translated into a small set of typed exceptions with actionable messages, not raw AppleScript/JXA error text. |
 | VI. Minimal, Justified Dependencies | PASS | Zero new dependencies — `osascript` is macOS-bundled; all parsing/matching uses the standard library. |
 
@@ -94,8 +97,8 @@ src/notes_mcp/
 ├── server.py                  # existing — untouched by this feature
 ├── apple/
 │   ├── __init__.py             # new — package marker
-│   └── core.py                 # new — ls, grep, mkdir, mv, rm + private JXA-invocation
-│                                #        helper + the module's exception classes
+│   └── core.py                 # new — ls, grep, mkdir, mv, rm, cat, append + private
+│                                #        JXA-invocation helper + the module's exception classes
 └── tools/
     └── list_folders.py        # existing — untouched by this feature
 
@@ -107,9 +110,9 @@ tests/
 │                                #        kind/identifier validation (no real Notes needed)
 └── integration/
     └── apple/
-        └── test_core_integration.py  # new — ls/grep/mkdir/mv against a dedicated
-                                       #        scratch test folder in real Notes;
-                                       #        skipped off-macOS or without Notes.app
+        └── test_core_integration.py  # new — ls/grep/mkdir/mv/cat/append against a
+                                       #        dedicated scratch test folder in real
+                                       #        Notes; skipped off-macOS or without Notes.app
 ```
 
 **Structure Decision**: Single project (unchanged from the sibling

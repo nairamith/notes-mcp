@@ -35,8 +35,20 @@
   matching; `rm` is a stub for this feature (no real deletion logic), with
   actual removal behavior deferred to a future feature. See spec.md
   Clarifications section.
-- "Apple Notes", "ls", "grep", "mkdir", "mv", "rm" are named because they are
-  the literal, deliberately-chosen subject/interface of this feature (per
-  the user's request), not incidental implementation choices — the spec
-  does not prescribe internal code structure, file layout, or libraries.
-- All items pass; no spec updates required before `/speckit-plan`.
+- "Apple Notes", "ls", "grep", "mkdir", "mv", "rm", "cat", "append" are
+  named because they are the literal, deliberately-chosen subject/interface
+  of this feature (per the user's request), not incidental implementation
+  choices — the spec does not prescribe internal code structure, file
+  layout, or libraries.
+- 2026-07-27: added User Story 6 (`cat`) and User Story 7 (`append`,
+  create-if-missing) to the same feature per user request ("also add cat
+  and append"), rather than splitting into a new feature — same file,
+  same in-review PR. `append`'s (folder_path, name)-based addressing (vs.
+  `cat`'s id-based addressing) and its ambiguous-match error were resolved
+  by reasoning through the constraints (documented in spec.md Assumptions
+  and research.md §3a) rather than an interactive clarification, since a
+  safe, defensible default existed (fail rather than guess). All checklist
+  items still pass with these additions — re-verified 2026-07-27.
+- All items pass; no spec updates required before `/speckit-tasks` (note:
+  `tasks.md` predates this amendment and needs to be regenerated via
+  `/speckit-tasks` before implementing `cat`/`append`).

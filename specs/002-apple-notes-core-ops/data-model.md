@@ -16,9 +16,17 @@ An individual Apple Notes note, as returned by `ls` and `grep`.
   duplicates across notes are expected and not an error.
 
 **Lifecycle**: A note's `folder_path` changes when `mv` relocates it; its
-`name` changes when `mv` renames it. No other state transitions are in
-scope for this feature (`rm` is a stub — see Folder/Note "Removal" note
-below).
+`name` changes when `mv` renames it. Its `content` (see below) is set by
+`append` — either freshly on creation, or extended on an existing note.
+No other state transitions are in scope for this feature (`rm` is a stub —
+see Folder/Note "Removal" note below).
+
+**Content**: A note also has plain-text `content`, addressed by `cat`
+(read, by `id`) and `append` (write, by `folder_path` + `name` — see
+research.md §3a for why writing uses a different address than reading).
+`content` is not included in the `Note` shape returned by `ls`/`grep`/`mv`
+(keeping those calls cheap, per research.md §6's batching rationale);
+`cat` is the dedicated accessor for it, returning a plain string.
 
 ## Folder
 
@@ -48,6 +56,17 @@ Neither entity gains a "deleted" state in this feature: `rm` is a stub
 including whether a removed item becomes recoverable and how non-empty
 folders are handled — are deferred to a future feature and will extend
 this data model then (e.g. a possible "Recently Deleted" state), not now.
+
+## Append targeting (not a persistent entity)
+
+`append(folder_path, name, text)` targets a note by `(folder_path, name)`
+rather than `id`, since it may need to create the note. Validation rules:
+- If exactly one note named `name` exists in `folder_path`, `append`
+  writes to it.
+- If none exists, `append` creates a new note named `name` in
+  `folder_path` (empty `content`) and then writes to it.
+- If more than one exists, `append` raises `AmbiguousMatchError` rather
+  than choosing one (FR-013).
 
 ## FolderListing (return shape of `ls`)
 
