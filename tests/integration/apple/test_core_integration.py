@@ -130,25 +130,14 @@ class TestMvIntegration:
 
 
 class TestRmIntegration:
-    def test_rm_note_deletes_it_via_notes_own_delete_mechanism(self, scratch_folder, seed_note):
-        seeded = seed_note(scratch_folder, "remove-me", "content")
+    def test_rm_never_removes_anything(self, scratch_folder, seed_note):
+        seeded = seed_note(scratch_folder, "keep-me", "content")
 
-        rm(kind="note", identifier=seeded["id"])
-
-        assert "remove-me" not in [n.name for n in ls(scratch_folder).notes]
-        # Verified empirically: Notes.delete() moves the note into Notes.app's
-        # own native "Recently Deleted" folder rather than purging it
-        # immediately, so it's still resolvable by id via cat() -- unlike a
-        # note that was never seeded, or is otherwise genuinely gone.
-        assert cat(seeded["id"]) == "content"
-
-    def test_rm_note_raises_not_found_for_missing_note(self):
-        with pytest.raises(NotFoundError):
-            rm(kind="note", identifier="x-coredata://not-a-real-id/ICNote/p999999")
-
-    def test_rm_folder_still_raises_not_implemented(self, scratch_folder):
         with pytest.raises(NotImplementedYetError):
-            rm(kind="folder", identifier=scratch_folder)
+            rm(kind="note", identifier=seeded["id"])
+
+        listing = ls(scratch_folder)
+        assert "keep-me" in [n.name for n in listing.notes]
 
 
 class TestCatIntegration:

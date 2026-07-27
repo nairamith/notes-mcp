@@ -341,37 +341,22 @@ def mv(
 
 
 def rm(kind: Literal["note", "folder"], identifier: str) -> None:
-    """Deletes a note via Notes.app's own delete mechanism.
+    """Stub for this feature — always raises, never touches Notes data.
 
-    This is a raw backend primitive mirroring what Notes.app itself does
-    with a deleted note — verified empirically, `Notes.delete()` moves it
-    into Notes.app's own native "Recently Deleted" folder rather than
-    purging it immediately (the same soft-delete/trash model as Mail or
-    Finder), not an instantly, permanently irrecoverable deletion.
-
-    No MCP tool in this project calls this function directly. `remove_note`
-    (the tool) does not use it: "removing" a note over MCP means archiving
-    it into a well-known `archive` folder that this project controls,
-    composing `mkdir`/`mv` directly (mirroring `update_note`'s identical
-    composition) — a deliberately different, tool-level policy decision
-    from whatever Notes.app's own delete mechanism happens to do.
+    Real removal behavior is deferred to a future feature.
 
     Args:
-        kind: "note" or "folder" — only "note" is implemented so far.
-        identifier: The note's id (`kind="note"`); not used for
-            `kind="folder"`.
+        kind: "note" or "folder" — accepted for interface stability but
+            not used yet.
+        identifier: The note's id or the folder's path; not used yet.
 
     Raises:
-        NotFoundError: No note with `identifier` exists.
-        NotImplementedYetError: `kind` is "folder" — folder deletion is
-            deferred to a future feature.
+        NotImplementedYetError: Always.
     """
-    if kind == "folder":
-        logger.info("op=rm outcome=not_implemented kind=folder")
-        raise NotImplementedYetError(
-            "rm is not implemented yet for folders in this feature; no folder was removed."
-        )
-    _run_jxa({"op": "rm_note", "identifier": identifier})
+    logger.info("op=rm outcome=not_implemented kind=%s", kind)
+    raise NotImplementedYetError(
+        "rm is not implemented yet in this feature; no note or folder was removed."
+    )
 
 
 def cat(note_id: str) -> str:

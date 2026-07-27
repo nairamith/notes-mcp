@@ -64,7 +64,7 @@ shared `src/notes_mcp/server.py`, so those two tasks (T004, T012) are not
 
 **Goal**: `remove_note(note_id)` archives a note into the well-known, top-level `archive` folder (auto-created on first use, same location as `update_note`'s replacement mode from feature 003) rather than permanently deleting it.
 
-**Amendment (PR review, research.md §2)**: `remove_note` composes `apple.core.mkdir`/`apple.core.mv` directly at the tool layer — mirroring `update_note`'s identical archive-on-replace composition — rather than calling `apple.core.rm`. Separately, `apple.core.rm`'s note path is implemented for real, matching what Notes.app's own delete mechanism does (moves a note into its native "Recently Deleted" folder — verified empirically, not an instant purge); this is a correctly-named backend primitive that no MCP tool in this feature exposes. The task descriptions below reflect this final design, not the original one.
+**Amendment (PR review, research.md §2)**: `remove_note` composes `apple.core.mkdir`/`apple.core.mv` directly at the tool layer — mirroring `update_note`'s identical archive-on-replace composition — rather than calling `apple.core.rm`. `apple.core.rm` is out of scope for this feature entirely (amendment 2, PR review) and remains exactly feature 002's original stub, unchanged. An interim design briefly implemented real `kind="note"` delete behavior for `rm`; T008–T010 and T013 below document that it was implemented and then reverted, per explicit maintainer direction that `rm`'s own implementation is a separate, future feature.
 
 **Independent Test**: Call the tool with an existing note; confirm (via listing) the note is gone from its original folder and now appears, unchanged, in the well-known top-level `archive` folder.
 
@@ -75,13 +75,13 @@ shared `src/notes_mcp/server.py`, so those two tasks (T004, T012) are not
 
 ### Implementation for User Story 2
 
-- [X] T008 [US2] Implement `apple.core.rm`'s real note-deletion behavior in `src/notes_mcp/apple/core.py`, via a new `jxa_scripts/rm_note.js` calling `Notes.delete(note)` (research.md §2): for `kind="note"`, look up the note by id and delete it via Notes.app's own delete mechanism (verified empirically to move the note into Notes' native "Recently Deleted" folder, not purge it instantly); for `kind="folder"`, behavior is unchanged — still raises `NotImplementedYetError` immediately. This function is not called by any tool in this feature. Update `rm`'s docstring accordingly
-- [X] T009 [P] [US2] Update `NotImplementedYetError`'s docstring in `src/notes_mcp/apple/exceptions.py` — it's now raised only by `rm`'s folder path, not notes (depends on T008)
-- [X] T010 [P] [US2] Update `TestRmStub` in `tests/unit/apple/test_core_unit.py` (split into `TestRmFolderStub`, unchanged, and a new `TestRmNote`): the new note-kind tests mock `subprocess` to verify the `rm_note` op is invoked with the correct identifier and that `NotFoundError` propagates (depends on T008)
-- [X] T011 [P] [US2] Implement `remove_note(note_id: str) -> Note` in `src/notes_mcp/tools/remove_note.py` by composing `apple.core.mkdir("", "archive")` (swallowing `AlreadyExistsError`) then `apple.core.mv(kind="note", identifier=note_id, destination_folder_path="archive")` directly — mirroring `update_note.py`'s identical composition; does **not** call `apple.core.rm` (no dependency on T008 — this task and T008 can proceed independently)
+- [X] T008 *(reverted — out of scope, see amendment 2 above)* `apple.core.rm`'s real note-deletion behavior was briefly implemented in `src/notes_mcp/apple/core.py` via a new `jxa_scripts/rm_note.js` calling `Notes.delete(note)` (verified empirically to move a note into Notes' native "Recently Deleted" folder, not purge it instantly), then fully reverted on review: `rm` is unchanged from feature 002 in the code this PR ships
+- [X] T009 *(reverted — depended on T008)* `NotImplementedYetError`'s docstring in `src/notes_mcp/apple/exceptions.py` is unchanged from feature 002 ("Raised by the `rm` stub. Always.")
+- [X] T010 *(reverted — depended on T008)* `TestRmStub` in `tests/unit/apple/test_core_unit.py` is unchanged from feature 002 — still asserts `NotImplementedYetError` for both kinds and that `subprocess` is never called
+- [X] T011 [P] [US2] Implement `remove_note(note_id: str) -> Note` in `src/notes_mcp/tools/remove_note.py` by composing `apple.core.mkdir("", "archive")` (swallowing `AlreadyExistsError`) then `apple.core.mv(kind="note", identifier=note_id, destination_folder_path="archive")` directly — mirroring `update_note.py`'s identical composition; does **not** call `apple.core.rm` and never depended on it (independent of T008's revert)
 - [X] T012 [US2] Register `remove_note` in `src/notes_mcp/server.py` (depends on T004, T011 — same file as T004, sequential)
-- [X] T013 [P] [US2] Update `TestRmIntegration` in `tests/integration/apple/test_core_integration.py`: the note-kind test now verifies real deletion against real Notes.app (note gone from its original folder's listing, but still resolvable via `cat()` — Notes' own "Recently Deleted" behavior); the folder-kind test is unchanged — still expects `NotImplementedYetError` (depends on T008)
-- [X] T014 [P] [US2] New integration test against real Notes.app covering `remove_note`'s edge cases (research.md §2-3): basic archive (note moved into `archive`, content preserved), archive folder auto-created on first use, removing a note already in `archive` succeeds as a safe no-op — in `tests/integration/tools/test_remove_note_integration.py` (depends on T011, T012; unaffected by the T008 amendment since the tool never called `rm`)
+- [X] T013 *(reverted — depended on T008)* `TestRmIntegration` in `tests/integration/apple/test_core_integration.py` is unchanged from feature 002 — still asserts `rm` raises `NotImplementedYetError` and removes nothing
+- [X] T014 [P] [US2] New integration test against real Notes.app covering `remove_note`'s edge cases (research.md §2-3): basic archive (note moved into `archive`, content preserved), archive folder auto-created on first use, removing a note already in `archive` succeeds as a safe no-op — in `tests/integration/tools/test_remove_note_integration.py` (depends on T011, T012; unaffected by T008's revert since the tool never called `rm`)
 
 **Checkpoint**: User Stories 1 AND 2 both work independently.
 
@@ -171,8 +171,8 @@ Task: "Implement move_note in src/notes_mcp/tools/move_note.py"
   the constitution's stated threshold for introducing a shared
   abstraction is a *third* real use case, and this is only the second
   (research.md §2)
-- `apple.core.rm`'s note path is a separate concern from `remove_note`:
-  it implements Notes.app's own real delete mechanism (backend
-  completeness, matching `ls`/`grep`/`mkdir`/`mv`/`cat`/`append`'s
-  thin-wrapper style), but no tool in this feature calls it — "remove"
-  over MCP always means archive (research.md §2, amendment)
+- `apple.core.rm` is entirely out of scope for this feature and remains
+  feature 002's original stub, unchanged, for both kinds — implementing
+  it for real (matching Notes.app's own delete mechanism) was explored
+  and then explicitly reverted on review as a separate, future feature
+  (research.md §2, amendment 2). `remove_note` never depended on it.

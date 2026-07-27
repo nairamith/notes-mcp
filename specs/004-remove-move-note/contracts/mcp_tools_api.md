@@ -46,15 +46,11 @@ destination_folder_path="archive")` — directly, at the tool layer,
 mirroring `update_note`'s identical archive-on-replace composition
 (feature 003). **Does not call `apple.core.rm`.**
 
-`apple.core.rm(kind="note", ...)` is a separate backend primitive that
-performs a real delete, matching what Notes.app's own delete mechanism
-does (moves the note into Notes' native "Recently Deleted" folder —
-verified empirically, not an instant permanent purge). It exists for
-backend completeness/correctness (mirroring `ls`/`grep`/`mkdir`/`mv`/`cat`/
-`append` as thin, literally-named operations over Apple Notes) but is not
-exposed by any tool in this feature — "remove" over MCP always means
-archive, never Notes' own delete/trash mechanism (amendment, research.md
-§2).
+`apple.core.rm` is out of scope for this feature entirely and remains
+feature 002's original stub (raises `NotImplementedYetError` for both
+`kind="note"` and `kind="folder"`) — implementing it for real (matching
+what Notes.app's own delete mechanism does) is a separate, future
+feature (amendment, research.md §2).
 
 - **Input schema**: `{"note_id": {"type": "string"}}`, required.
 - **Output**: **Not** wrapped — the structured content is the resulting
@@ -64,13 +60,9 @@ archive, never Notes' own delete/trash mechanism (amendment, research.md
 - **Errors**: `NotFoundError` if `note_id` does not exist. Nothing is
   removed in that case.
 - Never permanently deletes the note's content — the note continues to
-  exist, unchanged, at the well-known `archive` location (FR-005). This
-  guarantee holds regardless of `apple.core.rm`'s own behavior, since this
-  tool never calls it.
+  exist, unchanged, at the well-known `archive` location (FR-005).
 - Removing a note already located in `archive` succeeds as a no-op with
   respect to its location (research.md §3) — not an error, and does not
   duplicate the note.
 - Folders are out of scope: this tool only ever composes note-kind
-  `mkdir`/`mv` calls; `apple.core.rm(kind="folder", ...)` remains an
-  unimplemented stub, unchanged, and — like `rm(kind="note", ...)` — is
-  not exposed by any tool in this feature.
+  `mkdir`/`mv` calls.

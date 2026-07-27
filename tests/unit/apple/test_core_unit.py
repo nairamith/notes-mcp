@@ -135,28 +135,15 @@ class TestCatUnit:
         assert core._plaintext_to_content("TitleOnly\n") == ""
 
 
-class TestRmFolderStub:
-    def test_rm_folder_always_raises_not_implemented(self):
+class TestRmStub:
+    def test_rm_always_raises_not_implemented(self):
+        with pytest.raises(NotImplementedYetError):
+            rm(kind="note", identifier="anything")
         with pytest.raises(NotImplementedYetError):
             rm(kind="folder", identifier="anything")
 
-    def test_rm_folder_never_calls_osascript(self):
+    def test_rm_never_calls_osascript(self):
         with patch.object(core.subprocess, "run") as mock_run:
             with pytest.raises(NotImplementedYetError):
-                rm(kind="folder", identifier="anything")
+                rm(kind="note", identifier="anything")
             mock_run.assert_not_called()
-
-
-class TestRmNote:
-    def test_rm_note_invokes_the_rm_note_op_with_the_identifier(self):
-        response = json.dumps({"ok": True, "result": None})
-        with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=response)) as mock_run:
-            rm(kind="note", identifier="note-1")
-        argv = mock_run.call_args.args[0]
-        assert json.loads(argv[-1]) == {"op": "rm_note", "identifier": "note-1"}
-
-    def test_rm_note_raises_not_found_error(self):
-        response = json.dumps({"ok": False, "error_type": "NotFoundError", "message": "no such note"})
-        with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=response)):
-            with pytest.raises(NotFoundError):
-                rm(kind="note", identifier="bad-id")

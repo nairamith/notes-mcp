@@ -12,7 +12,11 @@
 
 ### Session 2026-07-27 (amendment — PR review)
 
-- Q: Should the remove tool archive a note by calling the backend's `rm` function (which itself composes `mkdir`/`mv` to archive), or should the tool compose `mkdir`/`mv` directly and leave `rm` as a separate, literal delete primitive? → A: The tool composes `mkdir`/`mv` directly, mirroring `update_note`'s identical archive-on-replace composition. `apple.core.rm` is implemented separately, matching what Notes.app's own delete mechanism actually does (moves a note into Notes' native "Recently Deleted" folder — verified empirically, not an instant permanent purge) — a real, correctly-named backend primitive that no MCP tool in this feature exposes. This keeps "archive, don't delete" as a tool-layer policy decision (consistent with how `update_note`'s replace-mode archiving already works), rather than baking that policy into the backend layer, which is meant to stay a thin, literal set of operations over Apple Notes.
+- Q: Should the remove tool archive a note by calling the backend's `rm` function (which itself composes `mkdir`/`mv` to archive), or should the tool compose `mkdir`/`mv` directly and leave `rm` as a separate, literal delete primitive? → A: The tool composes `mkdir`/`mv` directly, mirroring `update_note`'s identical archive-on-replace composition, rather than baking that policy into the backend layer, which is meant to stay a thin, literal set of operations over Apple Notes.
+
+### Session 2026-07-27 (amendment 2 — PR review)
+
+- Q: Given the above, should this feature also implement `apple.core.rm`'s real behavior (matching what Notes.app's own delete mechanism does), since the layering discussion surfaced what `rm` "should" mean? → A: No — explicitly out of scope for this PR. `apple.core.rm` remains exactly feature 002's original stub (raises `NotImplementedYetError` for both notes and folders); implementing it for real is a separate, future feature. `remove_note` never depended on `rm` being real in the first place, so this has no effect on this feature's own tools.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -110,12 +114,9 @@ unchanged, in the well-known top-level `archive` folder.
   This is a tool-level policy decision, achieved by composing the
   backend's existing `mkdir`/`mv` capabilities directly (mirroring
   `update_note`'s identical composition), not by calling the backend's
-  `rm` function (amendment — see below).
-- **FR-004a**: The system MUST also implement real behavior for notes in
-  the backend's `rm` function (previously an explicit stub reserved for a
-  future feature), matching Notes.app's own delete mechanism. This is a
-  distinct backend primitive from FR-004's remove tool — no MCP tool in
-  this feature exposes `rm` directly; the remove tool never calls it.
+  `rm` function (amendment — see Clarifications). `apple.core.rm` itself
+  is out of scope for this feature and remains unchanged from feature
+  002 (amendment 2 — see Clarifications).
 - **FR-005**: The remove tool MUST NOT permanently delete a note's content
   at any point; a removed note's content remains fully intact and
   reachable afterward via the well-known archive location.
@@ -124,10 +125,11 @@ unchanged, in the well-known top-level `archive` folder.
   rather than fail for its absence.
 - **FR-007**: Removing a note that doesn't exist MUST fail with a clear,
   structured error rather than silently succeeding.
-- **FR-008**: Real behavior for folders (`rm` called with a folder rather
-  than a note) remains out of scope for this feature and continues to
-  raise its existing not-implemented error — only notes gain real `rm`
-  behavior here, and only notes are supported by the remove tool.
+- **FR-008**: `apple.core.rm` (both `kind="note"` and `kind="folder"`)
+  remains entirely out of scope for this feature and continues to raise
+  its existing not-implemented error, unchanged from feature 002 — only
+  notes are supported by the remove tool, which achieves that support
+  without depending on `rm` at all (amendment 2 — see Clarifications).
 - **FR-009**: Every tool defined in this feature MUST translate the
   backend's typed errors into clear, structured MCP tool errors,
   consistent with this project's established tool contract — no tool may
@@ -172,12 +174,13 @@ unchanged, in the well-known top-level `archive` folder.
   additive/reversible operations over hard deletes wherever the platform
   supports it. This is a tool-level guarantee: the `remove_note` tool
   itself never calls anything that deletes a note.
-- `apple.core.rm`, separately, does implement a real delete for notes
-  (amendment — see Clarifications), matching what Notes.app's own delete
-  mechanism does. This is a backend primitive, not exposed by any tool in
-  this feature — it exists for the same reason `mkdir` and (until this
-  feature) `mv` existed as real, tested backend capabilities before ever
-  being exposed as their own tools.
+- `apple.core.rm` is entirely out of scope for this feature (amendment 2
+  — see Clarifications) and remains exactly feature 002's original stub,
+  for both `kind="note"` and `kind="folder"`. Implementing it for real is
+  a separate, future feature; it was briefly explored during this
+  feature's design (confirming empirically that Notes.app's own delete
+  mechanism moves a note into a native "Recently Deleted" folder rather
+  than purging it instantly) but explicitly reverted as out of scope.
 - The remove tool reuses the exact same top-level `archive` folder
   already established for `update_note`'s replacement mode (feature 003)
   — a single canonical archive location for anything this project ever
@@ -187,13 +190,11 @@ unchanged, in the well-known top-level `archive` folder.
   called with a folder remains an unimplemented stub, unchanged from
   today. Both are deliberate scope decisions, not oversights — revisit if
   a concrete need for folder-level move/remove tools arises.
-- No new backend capability is required for the move tool — it's a direct
-  wrap of the existing `mv` function. The remove tool requires no new
-  backend capability either: it composes the existing `mkdir`/`mv`
-  primitives directly, at the tool layer — the same composition pattern
-  already used by `update_note`'s replacement mode, implemented
-  independently here rather than factored into a shared helper (this
-  project's constitution prefers duplication over a shared abstraction
-  until a third real use case exists; this is only the second). A new
-  JXA script (`rm_note.js`) was needed for `apple.core.rm`'s own real
-  delete behavior, which the remove tool doesn't use.
+- No new backend capability is required for either tool. The move tool is
+  a direct wrap of the existing `mv` function. The remove tool composes
+  the existing `mkdir`/`mv` primitives directly, at the tool layer — the
+  same composition pattern already used by `update_note`'s replacement
+  mode, implemented independently here rather than factored into a shared
+  helper (this project's constitution prefers duplication over a shared
+  abstraction until a third real use case exists; this is only the
+  second).
