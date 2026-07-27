@@ -1,19 +1,18 @@
 <!--
 Sync Impact Report
 ==================
-Version change: (none) → 1.0.0
-Bump rationale: Initial ratification — constitution was an unfilled template with no
-  prior adopted principles, so this is the first concrete version (MAJOR.0.0 baseline).
+Version change: 1.0.0 → 1.1.0
+Bump rationale: Materially expanded guidance (new docstring-convention requirement
+  added to Development Workflow & Quality Gates) — no principle was redefined or
+  removed, so MINOR rather than MAJOR. Prompted by PR #2 review feedback requesting
+  Google-style docstrings for src/notes_mcp/apple/core.py.
 
-Modified principles: n/a (initial adoption, no prior named principles to rename)
+Modified principles: n/a (no existing principle renamed or redefined)
 
 Added sections:
-  - Core Principles I–VI (Simplicity & YAGNI; Test-First, Test-Always; MCP Contract
-    Integrity; Safe, Reversible Data Operations; Observability & Debuggability;
-    Minimal, Justified Dependencies)
-  - Platform & Integration Constraints
-  - Development Workflow & Quality Gates
-  - Governance
+  - Development Workflow & Quality Gates: new paragraph requiring Google-style
+    docstrings (summary + Args/Returns/Raises as applicable) for every Python
+    function/method, as a review blocker alongside the existing YAGNI/safety checks.
 
 Removed sections: none
 
@@ -21,13 +20,14 @@ Templates requiring updates:
   - .specify/templates/plan-template.md ✅ no change needed (Constitution Check gate
     reads the constitution dynamically per feature)
   - .specify/templates/spec-template.md ✅ no change needed (generic, principle-agnostic)
-  - .specify/templates/tasks-template.md ✅ updated — removed "tests are optional /
-    if requested" framing to align with Principle II (tests are mandatory)
+  - .specify/templates/tasks-template.md ✅ no change needed (docstring convention is
+    a code-review concern, not a task-generation concern)
   - .specify/templates/checklist-template.md ✅ no change needed (generic)
-  - README.md ⚠ pending — currently a placeholder title only; out of scope for this
-    command, left as a deferred follow-up (see Next Actions in the command output)
+  - src/notes_mcp/apple/core.py ✅ updated — all function docstrings rewritten to
+    Google style in the same PR that prompted this amendment
 
-Follow-up TODOs: none blocking.
+Follow-up TODOs: none blocking. Earlier v1.0.0 note about README.md being a
+placeholder is superseded — README.md was written in feature 001.
 -->
 
 # Notes MCP Constitution
@@ -136,6 +136,19 @@ necessary deviation from Simplicity or Safe Operations MUST be documented in the
 PR with rationale and, when driven by a specific feature, recorded in that
 feature's plan.md Complexity Tracking table.
 
+Every Python function and method MUST have a Google-style docstring (summary
+line, then `Args:`/`Returns:`/`Raises:` sections as applicable to that
+function) — a one-line summary alone is insufficient once a function takes
+parameters, returns a meaningful value, or raises a caller-relevant exception.
+This is a review blocker like the others in this section, not a style nit.
+
+**Rationale**: A function's parameters, return shape, and error contract should
+be discoverable from its docstring alone, without reading the implementation —
+consistent with this project's broader bias toward explicit, debuggable
+behavior (Principle V). A single, consistently-applied docstring convention
+also keeps review focused on whether the documented contract is right, rather
+than on inconsistent formatting.
+
 ## Governance
 
 This constitution supersedes ad hoc conventions and prior undocumented practice.
@@ -150,4 +163,4 @@ justified in a Complexity Tracking table. Where day-to-day runtime guidance (e.g
 future README.md or CLAUDE.md) conflicts with this document, this constitution
 governs.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-26 | **Last Amended**: 2026-07-26
+**Version**: 1.1.0 | **Ratified**: 2026-07-26 | **Last Amended**: 2026-07-27
