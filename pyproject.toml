@@ -6,11 +6,25 @@ build-backend = "setuptools.build_meta"
 name = "notes-mcp"
 version = "0.1.0"
 description = "MCP server for interacting with Apple Notes"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "Amith" }]
 requires-python = ">=3.11"
+classifiers = [
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Communications",
+]
 dependencies = [
     "mcp>=1.2.0",
     "pydantic>=2.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/nairamith/notes-mcp"
+Issues = "https://github.com/nairamith/notes-mcp/issues"
 
 [project.optional-dependencies]
 dev = [
