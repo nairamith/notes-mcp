@@ -154,6 +154,21 @@ class TestMvIntegration:
         assert renamed.name == "renamed"
         assert cat(seeded["id"]) == "line1"
 
+    def test_mv_note_rename_keeps_whitespace_in_content(self, scratch_folder):
+        note = append(scratch_folder, "original-name", "    indented\ta  b")
+
+        mv(kind="note", identifier=note.id, destination_folder_path=scratch_folder, new_name="renamed")
+
+        assert cat(note.id) == "    indented\ta  b"
+
+    def test_mv_note_rename_to_name_with_dollar_sequences(self, scratch_folder, seed_note):
+        seeded = seed_note(scratch_folder, "original-name", "line1")
+
+        renamed = mv(kind="note", identifier=seeded["id"], destination_folder_path=scratch_folder, new_name="cost $& $1")
+
+        assert renamed.name == "cost $& $1"
+        assert cat(seeded["id"]) == "line1"
+
     def test_mv_folder_rename_in_place(self, scratch_folder):
         created = mkdir(scratch_folder, "to-rename")
 
@@ -219,6 +234,30 @@ class TestAppendIntegration:
         append(scratch_folder, "multi-line", "third\nfourth")
 
         assert cat(note.id) == "first\nsecond\nthird\nfourth"
+
+    def test_append_preserves_spaces_and_tabs_in_new_note(self, scratch_folder):
+        text = "    indented\na    b\tafter tab\ntrailing   \n\tleading tab"
+
+        note = append(scratch_folder, "whitespace", text)
+
+        assert cat(note.id) == text
+
+    def test_append_preserves_spaces_and_tabs_when_appending(self, scratch_folder):
+        note = append(scratch_folder, "whitespace", "  first\tline")
+        append(scratch_folder, "whitespace", "    second  line")
+
+        assert cat(note.id) == "  first\tline\n    second  line"
+
+    def test_append_keeps_indentation_already_in_the_note(self, scratch_folder, seed_note):
+        # Seeded directly, the way Notes stores indentation typed in the
+        # app: as plain spaces in the body, which re-setting the body would
+        # otherwise collapse (issue #27).
+        seeded = seed_note(scratch_folder, "typed", "<div>&nbsp;&nbsp;&nbsp;&nbsp;indented&nbsp;&nbsp;twice</div>")
+        assert cat(seeded["id"]) == "    indented  twice"
+
+        append(scratch_folder, "typed", "added")
+
+        assert cat(seeded["id"]) == "    indented  twice\nadded"
 
     def test_append_escapes_html_in_each_line(self, scratch_folder):
         text = "a & b\n<not a tag>"

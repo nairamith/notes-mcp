@@ -249,6 +249,29 @@ written, line breaks included (blank, leading, and trailing lines too).
 Appending `""` adds one empty line, consistent with the newline-separator
 rule above.
 
+**Second addendum — spaces and tabs (issue #27)**: The same HTML parse
+collapses whitespace *within* a line: leading spaces are dropped, runs of
+spaces become one, and a tab becomes a space. Worse, Notes returns a
+note's body with plain spaces and tabs, so every re-set of the body —
+`append`'s `existing + new`, and `mv`'s rename, which rewrites the title
+line — also collapsed whitespace *already in the note*, including
+indentation the user typed in the Notes app. Verified empirically: Notes
+stores `&nbsp;` back as an ordinary space (so `cat`/`grep` see plain
+spaces), and keeps a tab written as `<span style="white-space:pre">\t</span>`.
+`textToHtml` therefore writes every space as `&nbsp;` and every tab in
+such a span (`preserveWhitespace`), and `append`/`mv` pass the existing
+body through `preserveBodyWhitespace` — the same transform, applied to
+the text between tags — before re-submitting it. Whitespace-only runs
+containing a newline between tags are HTML formatting, not content, and
+are left alone. Alternatives considered: converting only runs of 2+
+spaces and leading/trailing ones: rejected — more cases to get right for
+no observable difference, since Notes stores `&nbsp;` as a plain space
+either way. Wrapping each whole line in a `white-space:pre` span instead:
+rejected — Notes drops the span when storing (it keeps only the
+whitespace), so an existing body comes back with plain spaces and tabs
+regardless and still needs the per-character transform before being
+re-submitted; one transform for both keeps a single code path.
+
 ## 7. Error handling
 
 **Decision**: A small, flat exception hierarchy, all defined in

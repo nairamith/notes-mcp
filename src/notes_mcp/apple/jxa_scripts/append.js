@@ -13,7 +13,7 @@ function handle(Notes, cmd) {
   if (matchCount === 1) {
     targetNote = findByName(folder.notes, cmd.name);
     var existingBody = targetNote.body();
-    targetNote.body = existingBody + textToHtml(cmd.text);
+    targetNote.body = preserveBodyWhitespace(existingBody) + textToHtml(cmd.text);
   } else {
     // `name` is a plain-text property (Notes escapes it into the body
     // itself), so it must not be HTML-escaped here — only body HTML is.

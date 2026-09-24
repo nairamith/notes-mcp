@@ -22,8 +22,10 @@ function handle(Notes, cmd) {
   }
   if (cmd.new_name) {
     var body = note.body();
-    var newTitleDiv = "<div>" + escapeHtml(cmd.new_name) + "</div>";
-    note.body = body.replace(/^<div>[\s\S]*?<\/div>/, newTitleDiv);
+    var newTitleDiv = "<div>" + preserveWhitespace(escapeHtml(cmd.new_name)) + "</div>";
+    // A replacer function, not a string: in a replacement string, "$&",
+    // "$1", ... in new_name would be expanded.
+    note.body = preserveBodyWhitespace(body).replace(/^<div>[\s\S]*?<\/div>/, function () { return newTitleDiv; });
   }
   return { id: note.id(), name: note.name(), folder_path: cmd.destination_folder_path };
 }

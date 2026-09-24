@@ -11,6 +11,32 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;");
 }
 
+// Notes parses a note's body as HTML whenever it's set — on creation and
+// on every later `note.body = ...` (append, rename) — so runs of spaces,
+// leading/trailing spaces, and tabs collapse to at most one space. Notes
+// stores `&nbsp;` back as a plain space, and keeps a tab written inside a
+// `white-space:pre` span, so writing whitespace in those forms survives
+// the parse and reads back unchanged.
+function preserveWhitespace(html) {
+  return String(html)
+    .replace(/ /g, "&nbsp;")
+    .replace(/\t/g, '<span style="white-space:pre">\t</span>');
+}
+
+// Applies preserveWhitespace to the text between tags of a note's
+// *existing* body before it is re-submitted: Notes returns it with plain
+// spaces and tabs, which would otherwise collapse on the way back in.
+// Whitespace-only runs containing a newline are formatting between
+// elements (e.g. ">\n<"), not content, and are left alone.
+function preserveBodyWhitespace(body) {
+  return String(body).replace(/>([^<]+)</g, function (match, text) {
+    if (/^\s*$/.test(text) && text.indexOf("\n") !== -1) {
+      return match;
+    }
+    return ">" + preserveWhitespace(text) + "<";
+  });
+}
+
 // Converts plain text to Notes body HTML, one <div> per line. Notes'
 // body is HTML, so raw "\n" characters in it collapse to whitespace;
 // Notes itself stores each line as its own <div>, with <div><br></div>
@@ -18,7 +44,9 @@ function escapeHtml(text) {
 function textToHtml(text) {
   return String(text)
     .split("\n")
-    .map(function (line) { return "<div>" + (line.length ? escapeHtml(line) : "<br>") + "</div>"; })
+    .map(function (line) {
+      return "<div>" + (line.length ? preserveWhitespace(escapeHtml(line)) : "<br>") + "</div>";
+    })
     .join("");
 }
 
