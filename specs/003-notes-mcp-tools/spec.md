@@ -262,6 +262,13 @@ original content intact — is now there instead of gone.
   given name exists yet, the tool MUST simply create a new note with the
   given content (there is nothing to archive) — identical to the
   append-mode behavior in that same situation (FR-005, User Story 4).
+- **FR-017**: The note-creation tool's user-facing description and the
+  README MUST state that when a note by the given name already exists in
+  the given folder, the content is appended to it rather than a second
+  note being created (FR-004 and FR-005 share `append` — see
+  contracts/mcp_tools_api.md), and the README MUST state that the
+  note-move tool, unlike the note-creation tool, never auto-creates its
+  destination folder (amendment, issue #12).
 - **FR-007**: Every tool defined in this feature MUST translate the
   backend's typed errors (not-found, invalid pattern, ambiguous match,
   automation-permission-not-granted) into clear, structured MCP tool

@@ -9,8 +9,19 @@ import pytest
 
 from notes_mcp.apple.core import InvalidNameError, ls
 from notes_mcp.tools.create_note import create_note
+from notes_mcp.tools.read_note import read_note
 
 pytestmark = pytest.mark.usefixtures("skip_without_notes")
+
+
+def test_create_note_with_existing_name_appends_to_that_note(scratch_folder):
+    first = create_note(scratch_folder, "same-name", "first")
+
+    second = create_note(scratch_folder, "same-name", "second")
+
+    assert second.id == first.id
+    assert read_note(first.id) == "first\nsecond"
+    assert [n.name for n in ls(scratch_folder).notes] == ["same-name"]
 
 
 def test_create_note_creates_missing_subfolder_then_the_note(scratch_folder):

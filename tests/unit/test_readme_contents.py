@@ -41,3 +41,14 @@ def test_readme_documents_current_tools_not_the_retired_placeholder():
     ):
         assert tool in text
     assert "list_folders" not in text
+
+
+def test_readme_documents_create_note_append_and_folder_creation():
+    line = next(l for l in _text().splitlines() if l.startswith("- `create_note("))
+    assert "appended" in line
+    assert "creating `folder_path`" in line
+
+
+def test_readme_documents_move_note_destination_must_exist():
+    line = next(l for l in _text().splitlines() if l.startswith("- `move_note("))
+    assert "must already exist" in line

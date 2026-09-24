@@ -40,6 +40,8 @@ Wraps `apple.core.mv(kind="note", ...)`.
 - Moving a note to the folder it's already in succeeds as a no-op with
   respect to its location (research.md §1); if `new_name` is also given,
   the note is renamed in place regardless.
+- Unlike `create_note`, `move_note` never auto-creates its destination
+  folder — the README says so (issue #12).
 
 ## `remove_note(note_id: str) -> Note`
 
