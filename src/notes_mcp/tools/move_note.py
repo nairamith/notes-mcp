@@ -12,6 +12,8 @@ def move_note(note_id: str, destination_folder_path: str, new_name: str | None =
         destination_folder_path: `/`-delimited path to the folder to
             move the note into.
         new_name: If given, renames the note in the same call.
+            Leading/trailing whitespace is ignored, as Notes trims it
+            from titles.
 
     Returns:
         The moved (and possibly renamed) Note.

@@ -233,7 +233,11 @@ original content intact — is now there instead of gone.
   whitespace-only, or multi-line — MUST be rejected with a clear error
   before any folder or note is created, for this tool and the
   note-update tool alike (amendment, issue #10: an empty name otherwise
-  silently turned the content's first line into the title).
+  silently turned the content's first line into the title). Leading and
+  trailing whitespace in a name MUST be ignored for both creating and
+  finding a note, since Notes trims it from stored titles (amendment,
+  issue #26: a padded name otherwise created a new duplicate on every
+  call).
 - **FR-005**: The system MUST provide an MCP tool that, by default, adds
   content to an existing note — or creates it first if no note by that
   name exists yet in the given folder — backed by the existing `append`

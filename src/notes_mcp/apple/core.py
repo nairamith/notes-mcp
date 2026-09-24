@@ -187,17 +187,23 @@ def _plaintext_to_content(plaintext: str) -> str:
     return content
 
 
-def validate_note_name(name: str) -> None:
-    """Rejects a name that can't be a note's title.
+def validate_note_name(name: str) -> str:
+    """Rejects a name that can't be a note's title, and returns the title
+    Notes will actually store for one that can.
 
     Notes derives a note's title from the first line of its text, so an
     empty or whitespace-only name makes the first line of the content the
     title instead (silently removing it from the content), and a name
     with a line break has everything after the break end up in the
-    content.
+    content. Notes also trims surrounding whitespace from a title, so a
+    name is only ever looked up or stored in that trimmed form — otherwise
+    `" foo "` would never match the note Notes stored as `"foo"`.
 
     Args:
         name: The proposed note name.
+
+    Returns:
+        `name` with leading and trailing whitespace removed.
 
     Raises:
         InvalidNameError: `name` is empty, whitespace-only, or contains a
@@ -207,6 +213,7 @@ def validate_note_name(name: str) -> None:
         raise InvalidNameError("Note name must not be empty or whitespace-only")
     if "\n" in name or "\r" in name:
         raise InvalidNameError(f"Note name must be a single line, got {name!r}")
+    return name.strip()
 
 
 def ls(folder_path: str) -> FolderListing:
@@ -365,7 +372,7 @@ def mv(
     """
     if kind == "note":
         if new_name is not None:
-            validate_note_name(new_name)
+            new_name = validate_note_name(new_name)
         command = {
             "op": "mv_note",
             "identifier": identifier,
@@ -442,7 +449,8 @@ def append(folder_path: str, name: str, text: str) -> Note:
     Args:
         folder_path: `/`-delimited path to the folder the note is (or
             will be) in.
-        name: The note's title.
+        name: The note's title. Surrounding whitespace is ignored, as
+            Notes itself trims it from titles.
         text: Text to append. Separated from existing content with a
             newline; becomes the note's entire content if it's newly
             created (research.md §6a).
@@ -458,6 +466,6 @@ def append(folder_path: str, name: str, text: str) -> Note:
         InvalidNameError: `name` is empty, whitespace-only, or multi-line
             (see `validate_note_name`). Checked before anything is written.
     """
-    validate_note_name(name)
+    name = validate_note_name(name)
     result = _run_jxa({"op": "append", "folder_path": folder_path, "name": name, "text": text})
     return Note(**result)

@@ -75,6 +75,9 @@ wants that folder to exist, not a `NotFoundError`.
   whitespace-only, or multi-line — checked before any folder or note is
   created (issue #10). `folder_path` not existing is no longer an error
   case (see above).
+- Leading/trailing whitespace in `name` is ignored — Notes trims it from
+  titles — so a padded `name` finds (and appends to) the existing note
+  rather than creating a duplicate (issue #26).
 
 ## `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note`
 
@@ -105,6 +108,8 @@ step.
   once in `folder_path` — checked before any change is made, regardless
   of `overwrite`; `InvalidNameError` if `name` is empty, whitespace-only,
   or multi-line — also checked before any change (issue #10).
+- Leading/trailing whitespace in `name` is ignored, in both modes, as for
+  `create_note` (issue #26).
 - Never overwrites or removes existing content in place, in either mode
   (FR-005, FR-013): append mode adds newline-separated content (inherited
   from `append`'s contract, research.md §6a in feature 002); replace mode
