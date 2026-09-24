@@ -40,6 +40,10 @@ class TestLsIntegration:
         assert [f.name for f in listing.folders] == ["a-subfolder"]
         assert [n.name for n in listing.notes] == ["a-note"]
 
+    def test_ls_raises_not_found_for_missing_folder(self, scratch_folder):
+        with pytest.raises(NotFoundError):
+            ls(f"{scratch_folder}/does-not-exist")
+
     @pytest.mark.parametrize("spelling", ["{root}/child/", "{root}//child", "/{root}/child"])
     def test_ls_returns_canonical_paths_for_non_canonical_input(
         self, scratch_folder, seed_note, seed_subfolder, spelling
@@ -50,10 +54,6 @@ class TestLsIntegration:
         listing = ls(spelling.format(root=scratch_folder))
 
         assert [n.folder_path for n in listing.notes] == [f"{scratch_folder}/child"]
-
-    def test_ls_raises_not_found_for_missing_folder(self, scratch_folder):
-        with pytest.raises(NotFoundError):
-            ls(f"{scratch_folder}/does-not-exist")
 
 
 class TestGrepIntegration:
@@ -178,11 +178,6 @@ class TestAppendIntegration:
         listing = ls(scratch_folder)
         assert [n.name for n in listing.notes].count("shopping-list") == 1
 
-    def test_append_returns_canonical_folder_path(self, scratch_folder):
-        note = append(f"{scratch_folder}/", "trailing-slash", "text")
-
-        assert note.folder_path == scratch_folder
-
     def test_append_raises_ambiguous_match_for_duplicate_names(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "dup-name", "first")
         seed_note(scratch_folder, "dup-name", "second")
@@ -193,3 +188,8 @@ class TestAppendIntegration:
     def test_append_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):
             append(f"{scratch_folder}/nope", "name", "text")
+
+    def test_append_returns_canonical_folder_path(self, scratch_folder):
+        note = append(f"{scratch_folder}/", "trailing-slash", "text")
+
+        assert note.folder_path == scratch_folder
