@@ -194,6 +194,20 @@ class TestAppendIntegration:
         with pytest.raises(AmbiguousMatchError):
             append(scratch_folder, "dup-name", "more text")
 
+    def test_append_stores_html_special_characters_in_name_verbatim(self, scratch_folder):
+        note = append(scratch_folder, "Q&A <draft> notes", "first")
+
+        assert note.name == "Q&A <draft> notes"
+        assert [n.name for n in ls(scratch_folder).notes] == ["Q&A <draft> notes"]
+
+    def test_append_finds_existing_note_with_html_special_characters_in_name(self, scratch_folder):
+        first = append(scratch_folder, "R&D <x>", "first")
+        second = append(scratch_folder, "R&D <x>", "second")
+
+        assert second.id == first.id
+        assert cat(first.id) == "first\nsecond"
+        assert [n.name for n in ls(scratch_folder).notes] == ["R&D <x>"]
+
     def test_append_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):
             append(f"{scratch_folder}/nope", "name", "text")

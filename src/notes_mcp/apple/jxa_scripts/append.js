@@ -15,7 +15,9 @@ function handle(Notes, cmd) {
     var existingBody = targetNote.body();
     targetNote.body = existingBody + textToHtml(cmd.text);
   } else {
-    targetNote = Notes.Note({ name: escapeHtml(cmd.name), body: textToHtml(cmd.text) });
+    // `name` is a plain-text property (Notes escapes it into the body
+    // itself), so it must not be HTML-escaped here — only body HTML is.
+    targetNote = Notes.Note({ name: cmd.name, body: textToHtml(cmd.text) });
     folder.notes.push(targetNote);
   }
   return { id: targetNote.id(), name: targetNote.name(), folder_path: cmd.folder_path };

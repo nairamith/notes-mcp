@@ -104,6 +104,10 @@ preserving everything already there.
 - Returns the resulting `Note` (its `id`, `name`, `folder_path` — not its
   content; use `cat` to read the content back).
 - Never removes or overwrites existing content (FR-012, SC-006).
+- A newly created note's title is exactly `name`, character for
+  character — HTML-special characters (`&`, `<`, `>`) included — so a
+  later `append` with the same `name` finds that note rather than
+  creating a duplicate.
 - Line breaks inside `text` are preserved exactly: `cat` returns the
   same lines that were written (research.md §6a addendum).
 
