@@ -33,12 +33,12 @@ Wraps `apple.core.mv(kind="note", ...)`.
   `destination_folder_path`; `name` is `new_name` if given, otherwise
   unchanged.
 - **Errors**: `NotFoundError` if `note_id` or `destination_folder_path`
-  does not exist. Nothing is moved if either is missing. Unlike
-  `create_note`, `move_note` never auto-creates its destination folder —
-  documented as such in the README (issue #12).
+  does not exist. Nothing is moved if either is missing.
 - Moving a note to the folder it's already in succeeds as a no-op with
   respect to its location (research.md §1); if `new_name` is also given,
   the note is renamed in place regardless.
+- Unlike `create_note`, `move_note` never auto-creates its destination
+  folder — the README says so (issue #12).
 
 ## `remove_note(note_id: str) -> Note`
 
