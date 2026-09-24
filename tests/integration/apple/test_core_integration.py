@@ -40,6 +40,17 @@ class TestLsIntegration:
         assert [f.name for f in listing.folders] == ["a-subfolder"]
         assert [n.name for n in listing.notes] == ["a-note"]
 
+    @pytest.mark.parametrize("spelling", ["{root}/child/", "{root}//child", "/{root}/child"])
+    def test_ls_returns_canonical_paths_for_non_canonical_input(
+        self, scratch_folder, seed_note, seed_subfolder, spelling
+    ):
+        seed_subfolder(scratch_folder, "child")
+        seed_note(f"{scratch_folder}/child", "a-note", "hello")
+
+        listing = ls(spelling.format(root=scratch_folder))
+
+        assert [n.folder_path for n in listing.notes] == [f"{scratch_folder}/child"]
+
     def test_ls_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):
             ls(f"{scratch_folder}/does-not-exist")
@@ -166,6 +177,11 @@ class TestAppendIntegration:
         assert cat(note.id) == "milk\neggs"
         listing = ls(scratch_folder)
         assert [n.name for n in listing.notes].count("shopping-list") == 1
+
+    def test_append_returns_canonical_folder_path(self, scratch_folder):
+        note = append(f"{scratch_folder}/", "trailing-slash", "text")
+
+        assert note.folder_path == scratch_folder
 
     def test_append_raises_ambiguous_match_for_duplicate_names(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "dup-name", "first")

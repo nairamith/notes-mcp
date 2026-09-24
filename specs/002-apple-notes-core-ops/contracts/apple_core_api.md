@@ -107,6 +107,12 @@ preserving everything already there.
 
 ## Cross-cutting guarantees (all functions)
 
+- Folder paths are accepted in any spelling that differs only by empty
+  segments (`"A/B/"`, `"A//B"`, `"/A/B"`), and every path returned —
+  `Note.folder_path`, `Folder.path`, `Folder.parent_path` — is canonical
+  (`"A/B"`), never an echo of the input's spelling (research.md §2
+  addendum).
+
 - Every call logs its function name, outcome (success/error type), and
   duration via stdlib `logging`, per the constitution's Observability
   principle.
