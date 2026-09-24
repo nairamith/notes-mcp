@@ -132,6 +132,20 @@ class TestNoteNameValidationUnit:
     def test_validate_note_name_accepts_single_line_names(self, name):
         core.validate_note_name(name)
 
+    @pytest.mark.parametrize("name", [" padded ", "\tpadded", "padded  "])
+    def test_validate_note_name_returns_name_without_surrounding_whitespace(self, name):
+        assert core.validate_note_name(name) == "padded"
+
+    def test_append_sends_trimmed_name_to_notes(self):
+        with patch.object(core, "_run_jxa", return_value={"id": "1", "name": "n", "folder_path": "F"}) as mock_jxa:
+            core.append("F", "  n ", "text")
+        assert mock_jxa.call_args.args[0]["name"] == "n"
+
+    def test_mv_note_sends_trimmed_new_name_to_notes(self):
+        with patch.object(core, "_run_jxa", return_value={"id": "1", "name": "n", "folder_path": "F"}) as mock_jxa:
+            mv(kind="note", identifier="some-id", destination_folder_path="F", new_name=" n\t")
+        assert mock_jxa.call_args.args[0]["new_name"] == "n"
+
     def test_append_rejects_empty_name_without_calling_notes(self):
         with patch.object(core.subprocess, "run") as mock_run:
             with pytest.raises(InvalidNameError):

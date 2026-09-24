@@ -396,6 +396,35 @@ data move does succeed and is valuable; only the *subsequent automated
 inspection* of the destination is affected, which is a real but narrower
 limitation than "this doesn't work at all."
 
+**Addendum (issue #25)**: The same leftover also appears after a nested
+folder is *deleted* (`Notes.delete`): the folder stays in its parent's
+bulk `.name()`/`.id()` arrays but is gone from the account's flattened
+`account.folders` list, and dereferencing it throws -1728. A moved
+folder is likewise absent from that list, and unreadable even at the
+application level (`Notes.folders.byId`). Enumerating children one
+element at a time therefore made a single such leftover break `ls` of
+its parent, any `grep` scoped at or above it, and *every* whole-account
+`grep`.
+
+**Decision (issue #25)**: A child folder counts as present only if its id
+is in `account.folders`. `liveSubfolders` / `findLiveSubfolder`
+(jxa_scripts/common.js) filter every child enumeration and lookup this
+way: `ls` lists live children only (from the bulk name/id arrays, never
+dereferencing each child), `grep` recurses into live children only,
+`resolveFolder` resolves nested path segments against live children,
+and `mkdir`'s duplicate check ignores leftovers (so a deleted folder's
+name can be reused, and the path then resolves to the new folder). A
+folder moved to a different parent is consequently omitted from its
+destination's listing and search: it can't be read, and omitting it
+beats failing the whole call. The account-wide id list is fetched once
+per script, not per folder.
+
+**Alternatives considered (issue #25)**: Skipping a child only if
+touching it throws: rejected — a deleted child is still readable by id
+through its parent, so it would be listed as if it existed. Surfacing
+leftovers in `ls` by bulk name: rejected — they'd be paths that no later
+call can use.
+
 ## 11. Stable object references: by id, never by index (issues #6, #14)
 
 **Finding**: A JXA bracket-index specifier (`collection[idx]`) is not a
@@ -425,8 +454,32 @@ before each use: rejected — still index-based underneath, just with a
 smaller window. Retrying on -1728: rejected — hides the wrong-item case
 entirely, where nothing fails but the wrong note is returned.
 
+## 12. Note names are trimmed before lookup (issue #26)
+
+**Finding**: Notes trims leading and trailing whitespace (spaces and tabs
+alike) from a note's title when storing it. `append` looked existing notes
+up by the caller's exact `name`, so a padded name like `"foo "` never
+matched the note Notes had stored as `"foo"`: every call silently created
+another same-titled note, `update_note(overwrite=True)` never found
+anything to archive, and a later call with the trimmed name then hit
+`AmbiguousMatchError`.
+
+**Decision**: `validate_note_name` returns the name with surrounding
+whitespace stripped, and every caller (`append`, `mv`'s `new_name`, and
+the `create_note`/`update_note` tools, including `update_note`'s
+overwrite match) uses that value from then on. The name looked up is
+therefore always the name Notes stores.
+
+**Alternatives considered**: Rejecting padded names with
+`InvalidNameError`: rejected — unlike an empty or multi-line name, a
+padded name has one obvious meaning, which Notes itself already applies,
+and MCP clients (often LLMs) produce stray whitespace easily. Trimming
+inside the JXA scripts only: rejected — `update_note`'s overwrite check
+compares names in Python, so it would still miss.
+
 ## Outcome
 
 All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. One
 platform limitation discovered during implementation (§10), documented
-and scoped rather than blocking. Ready for Phase 1 design.
+and scoped rather than blocking; since issue #25, it no longer makes the
+destination folder unlistable. Ready for Phase 1 design.

@@ -37,6 +37,8 @@ Wraps `apple.core.mv(kind="note", ...)`.
   `InvalidNameError` if `new_name` is given but empty, whitespace-only, or
   multi-line — also before anything moves (issue #10; previously an empty
   `new_name` was silently ignored).
+- Leading/trailing whitespace in `new_name` is trimmed, matching what
+  Notes stores and what `create_note`/`update_note` look up (issue #26).
 - Moving a note to the folder it's already in succeeds as a no-op with
   respect to its location (research.md §1); if `new_name` is also given,
   the note is renamed in place regardless.

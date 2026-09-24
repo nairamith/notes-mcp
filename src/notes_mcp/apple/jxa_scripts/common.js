@@ -103,16 +103,54 @@ function findTopLevelFolder(acct, name) {
   return matches.length === 0 ? null : acct.folders.byId(matches[0].id);
 }
 
+// A folder's `folders` collection can still include children that are no
+// longer really there: a folder deleted with Notes.delete, or moved to a
+// different parent (see mv_folder_prepare.js), keeps showing up in its
+// parent's bulk .name()/.id() arrays, but dereferencing it in any way
+// throws "Can't get object" (-1728), and it's gone from the account's
+// flattened folder list. Only children still in that list are real,
+// readable folders, so everything that walks or looks up a folder's
+// children goes through these helpers — one such leftover must not break
+// listing, searching, or resolving paths through its parent.
+//
+// Returns an id -> true map of every folder in the account, for passing
+// to liveSubfolders (computed once per script, not once per folder).
+function liveFolderIds(acct) {
+  var live = {};
+  acct.folders.id().forEach(function (id) { live[id] = true; });
+  return live;
+}
+
+// Returns [{id, name}] for `folder`'s direct subfolders that are still
+// live (see above), in the parent's folder order.
+function liveSubfolders(folder, liveIds) {
+  var ids = folder.folders.id();
+  var names = folder.folders.name();
+  var result = [];
+  for (var i = 0; i < ids.length; i++) {
+    if (liveIds[ids[i]]) {
+      result.push({ id: ids[i], name: names[i] });
+    }
+  }
+  return result;
+}
+
+function findLiveSubfolder(folder, name, liveIds) {
+  var matches = liveSubfolders(folder, liveIds).filter(function (f) { return f.name === name; });
+  return matches.length === 0 ? null : folder.folders.byId(matches[0].id);
+}
+
 function resolveFolder(acct, path) {
   var parts = String(path).split("/").filter(function (p) { return p.length > 0; });
   if (parts.length === 0) {
     throwCustom("NotFoundError", "Empty folder path");
   }
+  var liveIds = parts.length > 1 ? liveFolderIds(acct) : null;
   var current = acct;
   var seen = [];
   for (var i = 0; i < parts.length; i++) {
     var name = parts[i];
-    var found = i === 0 ? findTopLevelFolder(acct, name) : findByName(current.folders, name);
+    var found = i === 0 ? findTopLevelFolder(acct, name) : findLiveSubfolder(current, name, liveIds);
     if (!found) {
       throwCustom(
         "NotFoundError",
@@ -131,13 +169,10 @@ function folderToJson(folder, path) {
   return { name: folder.name(), path: path, parent_path: parentPath };
 }
 
-function listImmediate(folder, path) {
-  var subfolders = folder.folders();
-  var folderNames = folder.folders.name();
-  var folders = [];
-  for (var i = 0; i < subfolders.length; i++) {
-    folders.push(folderToJson(subfolders[i], path + "/" + folderNames[i]));
-  }
+function listImmediate(acct, folder, path) {
+  var folders = liveSubfolders(folder, liveFolderIds(acct)).map(function (f) {
+    return { name: f.name, path: path + "/" + f.name, parent_path: path };
+  });
   var noteIds = folder.notes.id();
   var noteNames = folder.notes.name();
   var notes = [];
@@ -147,7 +182,7 @@ function listImmediate(folder, path) {
   return { folders: folders, notes: notes };
 }
 
-function collectNotesRecursive(folder, path) {
+function collectNotesRecursive(folder, path, liveIds) {
   var ids = folder.notes.id();
   var names = folder.notes.name();
   var plaintexts = folder.notes.plaintext();
@@ -155,10 +190,10 @@ function collectNotesRecursive(folder, path) {
   for (var i = 0; i < ids.length; i++) {
     results.push({ id: ids[i], name: names[i], folder_path: path, plaintext: plaintexts[i] });
   }
-  var subfolders = folder.folders();
-  var subNames = folder.folders.name();
+  var subfolders = liveSubfolders(folder, liveIds);
   for (var j = 0; j < subfolders.length; j++) {
-    results = results.concat(collectNotesRecursive(subfolders[j], path + "/" + subNames[j]));
+    var sub = folder.folders.byId(subfolders[j].id);
+    results = results.concat(collectNotesRecursive(sub, path + "/" + subfolders[j].name, liveIds));
   }
   return results;
 }

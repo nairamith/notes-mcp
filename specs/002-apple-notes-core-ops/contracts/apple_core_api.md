@@ -25,7 +25,7 @@ All defined in `apple/core.py`:
 - `InvalidNameError(AppleNotesError)` — a note name is empty,
   whitespace-only, or contains a line break (issue #10).
 
-## `validate_note_name(name: str) -> None`
+## `validate_note_name(name: str) -> str`
 
 Raises `InvalidNameError` if `name` can't be a note's title: empty,
 whitespace-only, or containing `\n`/`\r`. Notes derives a title from the
@@ -34,6 +34,11 @@ line of the content into the title (or push part of the name into the
 content). Called by `append` and by `mv` for a note's `new_name`, and
 exposed so tools that do other work first (e.g. `create_note` creating
 folders) can reject the name before changing anything.
+
+Otherwise returns `name` with leading and trailing whitespace removed —
+the title Notes actually stores, since it trims titles itself. Callers
+use the returned value for every lookup and write, so `" x "` and `"x"`
+always name the same note (issue #26, research.md §12).
 
 ## `ls(folder_path: str) -> FolderListing`
 
@@ -132,7 +137,9 @@ preserving everything already there.
 - A newly created note's title is exactly `name`, character for
   character — HTML-special characters (`&`, `<`, `>`) included — so a
   later `append` with the same `name` finds that note rather than
-  creating a duplicate.
+  creating a duplicate. The one exception is surrounding whitespace,
+  which is trimmed (as Notes itself does) before the lookup and the
+  write alike, so a padded `name` finds the note too (issue #26).
 - Line breaks inside `text` are preserved exactly: `cat` returns the
   same lines that were written (research.md §6a addendum).
 - Spaces and tabs are preserved exactly too — indentation, runs of
@@ -151,6 +158,12 @@ preserving everything already there.
 - Every call logs its function name, outcome (success/error type), and
   duration via stdlib `logging`, per the constitution's Observability
   principle.
+- A folder's leftover children — nested folders deleted in Notes, or
+  folders moved in from a different parent, which Notes still reports
+  under their parent but which can't be read (research.md §10 addendum)
+  — are never listed by `ls`, searched by `grep`, resolved as part of a
+  path, or counted as duplicates by `mkdir` (issue #25). One such
+  leftover never makes its parent, or a whole-account `grep`, fail.
 - No function ever interpolates its string arguments directly into an
   AppleScript/JXA script source — arguments are passed via the script's
   `argv`, eliminating script-injection risk from note/folder names

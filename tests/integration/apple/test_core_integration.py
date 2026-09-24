@@ -78,6 +78,16 @@ class TestLsIntegration:
         assert [n.folder_path for n in listing.notes] == [f"{scratch_folder}/child"]
 
 
+    def test_ls_skips_deleted_subfolder(self, scratch_folder, seed_subfolder, delete_subfolder):
+        seed_subfolder(scratch_folder, "kept")
+        seed_subfolder(scratch_folder, "deleted")
+        delete_subfolder(scratch_folder, "deleted")
+
+        listing = ls(scratch_folder)
+
+        assert [f.name for f in listing.folders] == ["kept"]
+
+
 class TestGrepIntegration:
     def test_grep_finds_matching_note(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "note-a", "this note is about groceries")
@@ -100,6 +110,17 @@ class TestGrepIntegration:
         seed_note(scratch_folder, "note-a", "nothing relevant here")
 
         assert grep(r"zzz_no_match_zzz", folder_path=scratch_folder) == []
+
+
+    def test_grep_skips_deleted_subfolder(self, scratch_folder, seed_note, seed_subfolder, delete_subfolder):
+        marker = f"marker-{uuid.uuid4().hex}"
+        seed_subfolder(scratch_folder, "kept")
+        seed_note(f"{scratch_folder}/kept", "kept-note", marker)
+        seed_subfolder(scratch_folder, "deleted")
+        delete_subfolder(scratch_folder, "deleted")
+
+        assert [n.name for n in grep(marker, folder_path=scratch_folder)] == ["kept-note"]
+        assert [n.name for n in grep(marker)] == ["kept-note"]
 
 
 class TestMkdirIntegration:
@@ -135,6 +156,19 @@ class TestMkdirIntegration:
             mkdir(f"{scratch_folder}/no-such-parent", "x")
 
 
+    def test_mkdir_recreates_deleted_subfolder_and_paths_resolve_to_it(
+        self, scratch_folder, seed_subfolder, delete_subfolder
+    ):
+        seed_subfolder(scratch_folder, "reborn")
+        delete_subfolder(scratch_folder, "reborn")
+
+        mkdir(scratch_folder, "reborn")
+        note = append(f"{scratch_folder}/reborn", "inside", "text")
+
+        assert [f.name for f in ls(scratch_folder).folders] == ["reborn"]
+        assert [n.id for n in ls(f"{scratch_folder}/reborn").notes] == [note.id]
+
+
 class TestMvIntegration:
     def test_mv_note_to_different_folder(self, scratch_folder, seed_note):
         seeded = seed_note(scratch_folder, "movable", "content")
@@ -150,6 +184,14 @@ class TestMvIntegration:
         seeded = seed_note(scratch_folder, "original-name", "line1")
 
         renamed = mv(kind="note", identifier=seeded["id"], destination_folder_path=scratch_folder, new_name="renamed")
+
+        assert renamed.name == "renamed"
+        assert cat(seeded["id"]) == "line1"
+
+    def test_mv_note_rename_trims_padded_new_name(self, scratch_folder, seed_note):
+        seeded = seed_note(scratch_folder, "original-name", "line1")
+
+        renamed = mv(kind="note", identifier=seeded["id"], destination_folder_path=scratch_folder, new_name="  renamed ")
 
         assert renamed.name == "renamed"
         assert cat(seeded["id"]) == "line1"
@@ -181,10 +223,8 @@ class TestMvIntegration:
 
     def test_mv_folder_to_different_parent(self, scratch_folder):
         # Verified via mv()'s own return value only, per research.md #10 —
-        # a container that has just received a moved folder can become
-        # unreadable via ls()/grep() in this Notes.app version, so this
-        # test deliberately does not chain further listing calls on the
-        # destination afterward.
+        # the moved folder itself can't be read back by any script in this
+        # Notes.app version.
         dest = mkdir(scratch_folder, "destination")
         source = mkdir(scratch_folder, "source-folder")
 
@@ -193,6 +233,20 @@ class TestMvIntegration:
         assert moved.name == "source-folder"
         assert moved.parent_path == dest.path
         assert moved.path == f"{dest.path}/source-folder"
+
+    def test_destination_stays_listable_after_folder_moved_into_it(self, scratch_folder, seed_note):
+        dest = mkdir(scratch_folder, "destination")
+        source = mkdir(scratch_folder, "source-folder")
+        seed_note(dest.path, "already-here", "content")
+
+        mv(kind="folder", identifier=source.path, destination_folder_path=dest.path)
+
+        # The moved folder is unreadable (research.md #10), so it's skipped
+        # rather than breaking the whole listing (issue #25).
+        listing = ls(dest.path)
+        assert listing.folders == []
+        assert [n.name for n in listing.notes] == ["already-here"]
+        assert [n.name for n in grep("content", folder_path=scratch_folder)] == ["already-here"]
 
     def test_mv_note_raises_not_found_for_missing_destination(self, scratch_folder, seed_note):
         seeded = seed_note(scratch_folder, "n", "c")
@@ -314,6 +368,15 @@ class TestAppendIntegration:
         assert second.id == first.id
         assert cat(first.id) == "first\nsecond"
         assert [n.name for n in ls(scratch_folder).notes] == ["R&D <x>"]
+
+    def test_append_with_padded_name_finds_note_stored_under_trimmed_title(self, scratch_folder):
+        first = append(scratch_folder, " padded\t", "first")
+        second = append(scratch_folder, "padded  ", "second")
+
+        assert first.name == "padded"
+        assert second.id == first.id
+        assert cat(first.id) == "first\nsecond"
+        assert [n.name for n in ls(scratch_folder).notes] == ["padded"]
 
     def test_append_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):

@@ -120,6 +120,18 @@ class TestOverwriteModeOneMatch:
         mock_append.assert_not_called()
 
 
+    def test_padded_name_matches_existing_note_by_its_trimmed_title(self):
+        with (
+            patch("notes_mcp.tools.update_note.core.ls", return_value=_listing("n")),
+            patch("notes_mcp.tools.update_note.core.mkdir"),
+            patch("notes_mcp.tools.update_note.core.mv") as mock_mv,
+            patch("notes_mcp.tools.update_note.core.append") as mock_append,
+        ):
+            update_note("F", " n ", "new", overwrite=True)
+        mock_mv.assert_called_once_with(kind="note", identifier="id-n", destination_folder_path="archive")
+        mock_append.assert_called_once_with("F", "n", "new")
+
+
 class TestOverwriteModeAmbiguousMatches:
     def test_more_than_one_match_skips_archive_and_lets_append_raise(self):
         with (

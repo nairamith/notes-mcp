@@ -29,6 +29,8 @@ Wraps `apple.core.ls`.
   top-level folders (`parent_path: null`) and no notes — Notes keeps every
   note inside a folder (issue #13).
 - **Errors**: `NotFoundError` if `folder_path` does not exist.
+- Folders Notes still reports but that can't be read (deleted, or moved in
+  from another parent) are omitted rather than failing the call (issue #25).
 - Read-only (FR-008).
 
 ## `search_notes(pattern: str, folder_path: str | None = None) -> list[Note]`
@@ -41,6 +43,8 @@ Wraps `apple.core.grep`.
   Empty array (`{"result": []}`) when nothing matches — not an error.
 - **Errors**: `InvalidPatternError` if `pattern` is not a valid regular
   expression; `NotFoundError` if `folder_path` is given and doesn't exist.
+- Unreadable leftover folders are skipped, so one of them never makes a
+  scoped or whole-account search fail (issue #25).
 - Read-only (FR-008).
 
 ## `read_note(note_id: str) -> str`
@@ -71,6 +75,9 @@ wants that folder to exist, not a `NotFoundError`.
   whitespace-only, or multi-line — checked before any folder or note is
   created (issue #10). `folder_path` not existing is no longer an error
   case (see above).
+- Leading/trailing whitespace in `name` is ignored — Notes trims it from
+  titles — so a padded `name` finds (and appends to) the existing note
+  rather than creating a duplicate (issue #26).
 - `content` round-trips exactly through `read_note` — line breaks, spaces,
   and tabs alike (issues #7, #27).
 
@@ -103,6 +110,8 @@ step.
   once in `folder_path` — checked before any change is made, regardless
   of `overwrite`; `InvalidNameError` if `name` is empty, whitespace-only,
   or multi-line — also checked before any change (issue #10).
+- Leading/trailing whitespace in `name` is ignored, in both modes, as for
+  `create_note` (issue #26).
 - Never overwrites or removes existing content in place, in either mode
   (FR-005, FR-013): append mode adds newline-separated content (inherited
   from `append`'s contract, research.md §6a in feature 002); replace mode
