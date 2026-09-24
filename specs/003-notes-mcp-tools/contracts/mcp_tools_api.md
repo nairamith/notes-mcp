@@ -25,6 +25,9 @@ Wraps `apple.core.ls`.
   `FolderListing` object directly: `{"folders": [...], "notes": [...]}`,
   where each folder is `{"name", "path", "parent_path"}` and each note is
   `{"id", "name", "folder_path"}`.
+- **Account root**: `folder_path=""` (or `"/"`) lists the account's
+  top-level folders (`parent_path: null`) and no notes — Notes keeps every
+  note inside a folder (issue #13).
 - **Errors**: `NotFoundError` if `folder_path` does not exist.
 - Read-only (FR-008).
 
