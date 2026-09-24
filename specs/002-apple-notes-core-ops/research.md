@@ -216,6 +216,16 @@ begins. A configurable separator: rejected as unnecessary flexibility for
 what the spec describes as a simple append (YAGNI) — can be added later if
 a real need for it appears.
 
+**Addendum — line breaks inside `text` (issue #7)**: Notes stores a
+note's body as HTML, where a raw `\n` is just whitespace, so writing
+`text` into the body verbatim collapsed `"line one\nline two"` into
+`"line one line two"`. `append` now converts `text` to one `<div>` per
+line (`<div><br></div>` for a blank line) — the same shape Notes itself
+uses — so the content `cat` returns is exactly the `text` that was
+written, line breaks included (blank, leading, and trailing lines too).
+Appending `""` adds one empty line, consistent with the newline-separator
+rule above.
+
 ## 7. Error handling
 
 **Decision**: A small, flat exception hierarchy, all defined in

@@ -151,6 +151,26 @@ class TestCatIntegration:
 
 
 class TestAppendIntegration:
+    def test_append_preserves_line_breaks_in_new_note(self, scratch_folder):
+        text = "line one\nline two\n\nafter a blank line"
+
+        note = append(scratch_folder, "multi-line", text)
+
+        assert cat(note.id) == text
+
+    def test_append_preserves_line_breaks_when_appending(self, scratch_folder):
+        note = append(scratch_folder, "multi-line", "first\nsecond")
+        append(scratch_folder, "multi-line", "third\nfourth")
+
+        assert cat(note.id) == "first\nsecond\nthird\nfourth"
+
+    def test_append_escapes_html_in_each_line(self, scratch_folder):
+        text = "a & b\n<not a tag>"
+
+        note = append(scratch_folder, "html-chars", text)
+
+        assert cat(note.id) == text
+
     def test_append_creates_note_when_missing(self, scratch_folder):
         note = append(scratch_folder, "shopping-list", "milk")
 
