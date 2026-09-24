@@ -15,7 +15,9 @@ def update_note(folder_path: str, name: str, content: str, overwrite: bool = Fal
     Args:
         folder_path: `/`-delimited path to the folder the note is (or
             will be) in.
-        name: The note's title.
+        name: The note's title. Leading/trailing whitespace is ignored
+            (Notes trims it from titles), so `" x "` and `"x"` name the
+            same note.
         content: Text to append, or (when `overwrite` is true and a
             matching note exists) the replacement note's entire content.
         overwrite: If false (the default), appends `content` to the
@@ -39,7 +41,7 @@ def update_note(folder_path: str, name: str, content: str, overwrite: bool = Fal
         InvalidNameError: `name` is empty, whitespace-only, or multi-line.
             Checked before any change is made.
     """
-    core.validate_note_name(name)
+    name = core.validate_note_name(name)
     if overwrite:
         listing = core.ls(folder_path)
         matches = [note for note in listing.notes if note.name == name]

@@ -402,6 +402,29 @@ before each use: rejected — still index-based underneath, just with a
 smaller window. Retrying on -1728: rejected — hides the wrong-item case
 entirely, where nothing fails but the wrong note is returned.
 
+## 12. Note names are trimmed before lookup (issue #26)
+
+**Finding**: Notes trims leading and trailing whitespace (spaces and tabs
+alike) from a note's title when storing it. `append` looked existing notes
+up by the caller's exact `name`, so a padded name like `"foo "` never
+matched the note Notes had stored as `"foo"`: every call silently created
+another same-titled note, `update_note(overwrite=True)` never found
+anything to archive, and a later call with the trimmed name then hit
+`AmbiguousMatchError`.
+
+**Decision**: `validate_note_name` returns the name with surrounding
+whitespace stripped, and every caller (`append`, `mv`'s `new_name`, and
+the `create_note`/`update_note` tools, including `update_note`'s
+overwrite match) uses that value from then on. The name looked up is
+therefore always the name Notes stores.
+
+**Alternatives considered**: Rejecting padded names with
+`InvalidNameError`: rejected — unlike an empty or multi-line name, a
+padded name has one obvious meaning, which Notes itself already applies,
+and MCP clients (often LLMs) produce stray whitespace easily. Trimming
+inside the JXA scripts only: rejected — `update_note`'s overwrite check
+compares names in Python, so it would still miss.
+
 ## Outcome
 
 All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. One

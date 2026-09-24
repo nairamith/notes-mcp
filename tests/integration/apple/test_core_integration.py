@@ -154,6 +154,14 @@ class TestMvIntegration:
         assert renamed.name == "renamed"
         assert cat(seeded["id"]) == "line1"
 
+    def test_mv_note_rename_trims_padded_new_name(self, scratch_folder, seed_note):
+        seeded = seed_note(scratch_folder, "original-name", "line1")
+
+        renamed = mv(kind="note", identifier=seeded["id"], destination_folder_path=scratch_folder, new_name="  renamed ")
+
+        assert renamed.name == "renamed"
+        assert cat(seeded["id"]) == "line1"
+
     def test_mv_folder_rename_in_place(self, scratch_folder):
         created = mkdir(scratch_folder, "to-rename")
 
@@ -275,6 +283,15 @@ class TestAppendIntegration:
         assert second.id == first.id
         assert cat(first.id) == "first\nsecond"
         assert [n.name for n in ls(scratch_folder).notes] == ["R&D <x>"]
+
+    def test_append_with_padded_name_finds_note_stored_under_trimmed_title(self, scratch_folder):
+        first = append(scratch_folder, " padded\t", "first")
+        second = append(scratch_folder, "padded  ", "second")
+
+        assert first.name == "padded"
+        assert second.id == first.id
+        assert cat(first.id) == "first\nsecond"
+        assert [n.name for n in ls(scratch_folder).notes] == ["padded"]
 
     def test_append_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):

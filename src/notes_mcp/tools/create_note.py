@@ -38,7 +38,9 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
         folder_path: `/`-delimited path to the folder the note is created
             in. Ensured to exist (creating it, and any missing
             intermediate folders, first) before the note is created.
-        name: The note's title.
+        name: The note's title. Leading/trailing whitespace is ignored
+            (Notes trims it from titles), so `" x "` and `"x"` name the
+            same note.
         content: The note's initial content.
 
     Returns:
@@ -51,6 +53,6 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
         InvalidNameError: `name` is empty, whitespace-only, or multi-line.
             Checked before any folder or note is created.
     """
-    core.validate_note_name(name)
+    name = core.validate_note_name(name)
     _ensure_folder_exists(folder_path)
     return core.append(folder_path, name, content)
