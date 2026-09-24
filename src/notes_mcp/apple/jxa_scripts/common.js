@@ -40,6 +40,30 @@ function findByName(itemsCollection, name) {
   return itemsCollection.byId(itemsCollection.id()[idx]);
 }
 
+// `account.folders` lists *every* folder in the account, nested ones
+// included, flattened — not just its top-level folders. Anything that
+// means "the folders directly at the account root" goes through these
+// helpers, which keep only folders whose container is the account itself.
+// Returns [{id, name}] in the account's folder order.
+function topLevelFolders(acct) {
+  var acctId = acct.id();
+  var containerIds = acct.folders.container.id();
+  var ids = acct.folders.id();
+  var names = acct.folders.name();
+  var result = [];
+  for (var i = 0; i < ids.length; i++) {
+    if (containerIds[i] === acctId) {
+      result.push({ id: ids[i], name: names[i] });
+    }
+  }
+  return result;
+}
+
+function findTopLevelFolder(acct, name) {
+  var matches = topLevelFolders(acct).filter(function (f) { return f.name === name; });
+  return matches.length === 0 ? null : acct.folders.byId(matches[0].id);
+}
+
 function resolveFolder(acct, path) {
   var parts = String(path).split("/").filter(function (p) { return p.length > 0; });
   if (parts.length === 0) {
@@ -49,7 +73,7 @@ function resolveFolder(acct, path) {
   var seen = [];
   for (var i = 0; i < parts.length; i++) {
     var name = parts[i];
-    var found = findByName(current.folders, name);
+    var found = i === 0 ? findTopLevelFolder(acct, name) : findByName(current.folders, name);
     if (!found) {
       throwCustom(
         "NotFoundError",
