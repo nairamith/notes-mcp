@@ -31,3 +31,16 @@ def test_create_note_creates_multiple_missing_intermediate_folders(scratch_folde
     assert note.folder_path == target
     listing = ls(target)
     assert [n.name for n in listing.notes] == ["deep-note"]
+
+
+def test_create_note_in_new_subfolder_that_sorts_before_its_parent(late_sorting_scratch_folder):
+    # A new folder named to sort before its top-level parent shifts that
+    # parent's position in the account's flattened folder list; lookups
+    # must not depend on that position (issue #6).
+    target = f"{late_sorting_scratch_folder}/aa-child"
+
+    note = create_note(target, "sorted-before-parent", "content")
+
+    assert note.folder_path == target
+    listing = ls(target)
+    assert [n.name for n in listing.notes] == ["sorted-before-parent"]

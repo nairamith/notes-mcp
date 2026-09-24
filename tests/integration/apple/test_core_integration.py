@@ -167,6 +167,18 @@ class TestAppendIntegration:
         listing = ls(scratch_folder)
         assert [n.name for n in listing.notes].count("shopping-list") == 1
 
+    def test_append_to_older_note_returns_that_note_not_a_neighbor(self, scratch_folder, seed_note):
+        # Editing a note moves it to the top of its folder's modified-date
+        # order; the returned Note must still be the edited one (issue #14).
+        older = seed_note(scratch_folder, "older", "first")
+        seed_note(scratch_folder, "newer", "second")
+
+        note = append(scratch_folder, "older", "more")
+
+        assert note.id == older["id"]
+        assert note.name == "older"
+        assert cat(older["id"]) == "first\nmore"
+
     def test_append_raises_ambiguous_match_for_duplicate_names(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "dup-name", "first")
         seed_note(scratch_folder, "dup-name", "second")

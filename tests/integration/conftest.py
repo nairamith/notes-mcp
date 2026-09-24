@@ -150,6 +150,18 @@ def scratch_folder(skip_without_notes):
 
 
 @pytest.fixture
+def late_sorting_scratch_folder(skip_without_notes):
+    """Like scratch_folder, but named to sort *after* typical subfolder
+    names in the account's folder list, for tests where a new subfolder
+    must sort before its own top-level parent.
+    """
+    name = f"zz_notes_mcp_test_{uuid.uuid4().hex[:12]}"
+    _run_test_jxa(_SCRATCH_BOOTSTRAP, [name])
+    yield name
+    _run_test_jxa(_RECURSIVE_DELETE, [name])
+
+
+@pytest.fixture
 def seed_note():
     """Factory fixture: seed_note(folder_path, name, body) creates a note
     directly (bypassing append/mkdir) for use as fixture data.
