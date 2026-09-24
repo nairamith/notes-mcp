@@ -340,6 +340,35 @@ data move does succeed and is valuable; only the *subsequent automated
 inspection* of the destination is affected, which is a real but narrower
 limitation than "this doesn't work at all."
 
+## 11. Stable object references: by id, never by index (issues #6, #14)
+
+**Finding**: A JXA bracket-index specifier (`collection[idx]`) is not a
+reference to an object — it is re-evaluated against the collection on
+every access. Two collections this module indexes into reorder under it:
+
+- `account.folders` is **flattened** — it lists every folder in the
+  account, nested ones included, in name order. Creating a folder whose
+  name sorts before an existing top-level folder shifts that folder's
+  index, so a path resolved just before (or while) that happens can point
+  at the wrong folder or at nothing: `create_note` into a brand-new
+  subfolder named to sort before its own top-level parent failed with
+  "Can't get object" (-1728) every time (issue #6).
+- A folder's `notes` are ordered by modification date. Writing to a note
+  moves it to the front, so after `append` edited a note found at
+  `folder.notes[idx]`, reading `.id()`/`.name()` back through the same
+  specifier returned whichever *other* note now sat at `idx` (issue #14).
+
+**Decision**: `findByName` (jxa_scripts/common.js) still locates an item
+through the unfiltered collection's `.name()` array (see its comment for
+why not `whose()`), but returns `collection.byId(ids[idx])` — a by-id
+specifier, read with the same bulk property fetch as the names — so every
+later access resolves to the same object regardless of reordering.
+
+**Alternatives considered**: Re-looking an item up by name immediately
+before each use: rejected — still index-based underneath, just with a
+smaller window. Retrying on -1728: rejected — hides the wrong-item case
+entirely, where nothing fails but the wrong note is returned.
+
 ## Outcome
 
 All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. One

@@ -23,10 +23,21 @@ function throwCustom(errorType, message) {
 // the *unfiltered* collection, at the index found via its .name() array,
 // does not have this problem — so every by-name lookup in this module
 // goes through this helper instead of whose().
+//
+// The item found is returned as a by-id specifier, never as the index
+// specifier itself (collection[idx]): index specifiers are re-evaluated on
+// every access, so they silently point at a different item once the
+// collection reorders — e.g. a folder whose name sorts earlier being added
+// to the account's (flattened) folder list, or a note being edited and
+// moving to the top of its folder's modified-date order. Names and ids
+// are read with the same bulk property fetch shape so they line up.
 function findByName(itemsCollection, name) {
   var names = itemsCollection.name();
   var idx = names.indexOf(name);
-  return idx === -1 ? null : itemsCollection[idx];
+  if (idx === -1) {
+    return null;
+  }
+  return itemsCollection.byId(itemsCollection.id()[idx]);
 }
 
 function resolveFolder(acct, path) {
