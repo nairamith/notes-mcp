@@ -15,6 +15,35 @@ import uuid
 
 import pytest
 
+# Shared by the fixture scripts below. `account.folders` is flattened (it
+# lists nested folders too, in name order), and index specifiers like
+# `folders[idx]` are re-evaluated on each access, so they can land on a
+# different folder — for a teardown that deletes, possibly a real one.
+# Resolve by name through bulk id/name/container arrays and dereference by
+# id only.
+_FIXTURE_HELPERS = """
+function topLevelFolderId(acct, name) {
+  var acctId = acct.id();
+  var containerIds = acct.folders.container.id();
+  var ids = acct.folders.id();
+  var names = acct.folders.name();
+  for (var i = 0; i < ids.length; i++) {
+    if (containerIds[i] === acctId && names[i] === name) { return ids[i]; }
+  }
+  return null;
+}
+
+function resolveFixtureFolder(acct, folderPath) {
+  var parts = folderPath.split("/").filter(function (p) { return p.length > 0; });
+  var current = acct.folders.byId(topLevelFolderId(acct, parts[0]));
+  for (var i = 1; i < parts.length; i++) {
+    var idx = current.folders.name().indexOf(parts[i]);
+    current = current.folders.byId(current.folders.id()[idx]);
+  }
+  return current;
+}
+"""
+
 _SCRATCH_BOOTSTRAP = """
 function run(argv) {
   var Notes = Application("Notes");
@@ -25,41 +54,34 @@ function run(argv) {
 }
 """
 
-_RECURSIVE_DELETE = """
+_RECURSIVE_DELETE = _FIXTURE_HELPERS + """
 function run(argv) {
   var Notes = Application("Notes");
   var acct = Notes.accounts[0];
   var name = argv[0];
   function deleteRecursive(folder) {
     try {
-      var subs = folder.folders();
-      for (var i = 0; i < subs.length; i++) {
-        try { deleteRecursive(subs[i]); } catch (e) {}
+      var subIds = folder.folders.id();
+      for (var i = 0; i < subIds.length; i++) {
+        try { deleteRecursive(folder.folders.byId(subIds[i])); } catch (e) {}
       }
     } catch (e) {}
     try { Notes.delete(folder); } catch (e) {}
   }
-  var names = acct.folders.name();
-  var idx = names.indexOf(name);
-  if (idx !== -1) { deleteRecursive(acct.folders[idx]); }
+  var id = topLevelFolderId(acct, name);
+  if (id !== null) { deleteRecursive(acct.folders.byId(id)); }
   return "ok";
 }
 """
 
-_SEED_NOTE = """
+_SEED_NOTE = _FIXTURE_HELPERS + """
 function run(argv) {
   var Notes = Application("Notes");
   var acct = Notes.accounts[0];
   var folderPath = argv[0];
   var name = argv[1];
   var body = argv[2];
-  var parts = folderPath.split("/").filter(function (p) { return p.length > 0; });
-  var current = acct;
-  for (var i = 0; i < parts.length; i++) {
-    var names = current.folders.name();
-    var idx = names.indexOf(parts[i]);
-    current = current.folders[idx];
-  }
+  var current = resolveFixtureFolder(acct, folderPath);
   var n = Notes.Note({ name: name, body: body });
   current.notes.push(n);
   return JSON.stringify({ id: n.id(), name: n.name() });
@@ -78,19 +100,13 @@ function run(argv) {
 }
 """
 
-_SEED_SUBFOLDER = """
+_SEED_SUBFOLDER = _FIXTURE_HELPERS + """
 function run(argv) {
   var Notes = Application("Notes");
   var acct = Notes.accounts[0];
   var folderPath = argv[0];
   var name = argv[1];
-  var parts = folderPath.split("/").filter(function (p) { return p.length > 0; });
-  var current = acct;
-  for (var i = 0; i < parts.length; i++) {
-    var names = current.folders.name();
-    var idx = names.indexOf(parts[i]);
-    current = current.folders[idx];
-  }
+  var current = resolveFixtureFolder(acct, folderPath);
   var f = Notes.Folder({ name: name });
   current.folders.push(f);
   return JSON.stringify({ name: f.name() });
