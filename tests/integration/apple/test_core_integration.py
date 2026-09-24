@@ -49,6 +49,19 @@ class TestLsIntegration:
         with pytest.raises(NotFoundError):
             ls(nested)
 
+    @pytest.mark.parametrize("root", ["", "/"])
+    def test_ls_of_account_root_lists_top_level_folders_only(self, scratch_folder, seed_subfolder, root):
+        seed_subfolder(scratch_folder, "nested-only")
+
+        listing = ls(root)
+
+        by_name = {f.name: f for f in listing.folders}
+        assert by_name[scratch_folder].path == scratch_folder
+        assert by_name[scratch_folder].parent_path is None
+        assert "nested-only" not in by_name
+        assert all(f.parent_path is None for f in listing.folders)
+        assert listing.notes == []
+
     def test_ls_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):
             ls(f"{scratch_folder}/does-not-exist")

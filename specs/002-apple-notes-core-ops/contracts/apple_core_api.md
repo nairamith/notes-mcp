@@ -45,6 +45,8 @@ Lists the immediate notes and subfolders inside `folder_path`.
 - **Read-only**: never changes any Notes data (FR-008).
 - Returns an empty `FolderListing` (both lists empty) for an existing,
   empty folder — this is success, not an error.
+- `folder_path=""` (or `"/"`) lists the account root: every top-level
+  folder (as `Folder`s with `parent_path=None`) and no notes (issue #13).
 
 ## `grep(pattern: str, folder_path: str | None = None) -> list[Note]`
 
