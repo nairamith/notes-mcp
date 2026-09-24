@@ -29,11 +29,16 @@ class AmbiguousMatchError(AppleNotesError):
     """`append`'s (folder_path, name) matches more than one existing note."""
 
 
+class InvalidNameError(AppleNotesError):
+    """A note name is empty, whitespace-only, or spans more than one line."""
+
+
 EXCEPTION_TYPES: dict[str, type[AppleNotesError]] = {
     "NotFoundError": NotFoundError,
     "AlreadyExistsError": AlreadyExistsError,
     "InvalidPatternError": InvalidPatternError,
     "AutomationPermissionError": AutomationPermissionError,
     "AmbiguousMatchError": AmbiguousMatchError,
+    "InvalidNameError": InvalidNameError,
     "AppleNotesError": AppleNotesError,
 }

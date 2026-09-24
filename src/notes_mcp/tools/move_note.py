@@ -19,5 +19,7 @@ def move_note(note_id: str, destination_folder_path: str, new_name: str | None =
     Raises:
         NotFoundError: `note_id` or `destination_folder_path` does not
             exist. Nothing is moved in that case.
+        InvalidNameError: `new_name` is given but empty, whitespace-only,
+            or multi-line. Nothing is moved in that case.
     """
     return core.mv(kind="note", identifier=note_id, destination_folder_path=destination_folder_path, new_name=new_name)

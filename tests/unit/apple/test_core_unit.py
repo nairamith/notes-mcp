@@ -15,6 +15,7 @@ from notes_mcp.apple import core
 from notes_mcp.apple.core import (
     AmbiguousMatchError,
     AutomationPermissionError,
+    InvalidNameError,
     InvalidPatternError,
     NotFoundError,
     NotImplementedYetError,
@@ -119,6 +120,29 @@ class TestAppendUnit:
         with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=payload)):
             with pytest.raises(NotFoundError):
                 core.append("does/not/exist", "name", "text")
+
+
+class TestNoteNameValidationUnit:
+    @pytest.mark.parametrize("name", ["", "   ", "\t", "two\nlines", "trailing\n", "carriage\rreturn"])
+    def test_validate_note_name_rejects_unusable_titles(self, name):
+        with pytest.raises(InvalidNameError):
+            core.validate_note_name(name)
+
+    @pytest.mark.parametrize("name", ["groceries", "Q&A <draft> notes", " padded ", "a/b"])
+    def test_validate_note_name_accepts_single_line_names(self, name):
+        core.validate_note_name(name)
+
+    def test_append_rejects_empty_name_without_calling_notes(self):
+        with patch.object(core.subprocess, "run") as mock_run:
+            with pytest.raises(InvalidNameError):
+                core.append("Folder", "", "content")
+        mock_run.assert_not_called()
+
+    def test_mv_note_rejects_blank_new_name_without_calling_notes(self):
+        with patch.object(core.subprocess, "run") as mock_run:
+            with pytest.raises(InvalidNameError):
+                mv(kind="note", identifier="some-id", destination_folder_path="Somewhere", new_name=" ")
+        mock_run.assert_not_called()
 
 
 class TestCatUnit:

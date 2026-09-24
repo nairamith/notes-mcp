@@ -36,7 +36,10 @@ def update_note(folder_path: str, name: str, content: str, overwrite: bool = Fal
         AmbiguousMatchError: More than one note already named `name`
             exists in `folder_path` — checked before any change is made,
             regardless of `overwrite`.
+        InvalidNameError: `name` is empty, whitespace-only, or multi-line.
+            Checked before any change is made.
     """
+    core.validate_note_name(name)
     if overwrite:
         listing = core.ls(folder_path)
         matches = [note for note in listing.notes if note.name == name]

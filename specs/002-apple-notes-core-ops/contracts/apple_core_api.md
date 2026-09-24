@@ -22,6 +22,18 @@ All defined in `apple/core.py`:
   this feature.
 - `AmbiguousMatchError(AppleNotesError)` — `append`'s `(folder_path,
   name)` matches more than one existing note.
+- `InvalidNameError(AppleNotesError)` — a note name is empty,
+  whitespace-only, or contains a line break (issue #10).
+
+## `validate_note_name(name: str) -> None`
+
+Raises `InvalidNameError` if `name` can't be a note's title: empty,
+whitespace-only, or containing `\n`/`\r`. Notes derives a title from the
+first line of a note's text, so such a name would silently turn the first
+line of the content into the title (or push part of the name into the
+content). Called by `append` and by `mv` for a note's `new_name`, and
+exposed so tools that do other work first (e.g. `create_note` creating
+folders) can reject the name before changing anything.
 
 ## `ls(folder_path: str) -> FolderListing`
 
@@ -71,6 +83,8 @@ same call; if omitted, its current name is kept.
   required to be unique, so this check does not apply when moving a note).
 - Returns the moved/renamed `Note` or `Folder` (reflecting its new
   `folder_path`/`path` and, if changed, `name`).
+- **Raises** `InvalidNameError` for `kind="note"` when `new_name` is
+  given but fails `validate_note_name` — checked before anything moves.
 - Never destroys or duplicates content (FR-005).
 
 ## `rm(kind: Literal["note", "folder"], identifier: str) -> NoReturn`
@@ -101,6 +115,8 @@ preserving everything already there.
 - **Raises** `AmbiguousMatchError` if more than one note named `name`
   already exists in `folder_path` (FR-013) — `append` never guesses which
   one to modify.
+- **Raises** `InvalidNameError` if `name` fails `validate_note_name` —
+  checked before any Notes interaction.
 - Returns the resulting `Note` (its `id`, `name`, `folder_path` — not its
   content; use `cat` to read the content back).
 - Never removes or overwrites existing content (FR-012, SC-006).

@@ -34,6 +34,9 @@ Wraps `apple.core.mv(kind="note", ...)`.
   unchanged.
 - **Errors**: `NotFoundError` if `note_id` or `destination_folder_path`
   does not exist. Nothing is moved if either is missing.
+  `InvalidNameError` if `new_name` is given but empty, whitespace-only, or
+  multi-line — also before anything moves (issue #10; previously an empty
+  `new_name` was silently ignored).
 - Moving a note to the folder it's already in succeeds as a no-op with
   respect to its location (research.md §1); if `new_name` is also given,
   the note is renamed in place regardless.

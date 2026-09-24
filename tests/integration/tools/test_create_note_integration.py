@@ -7,7 +7,7 @@ never the developer's/user's real personal folders.
 
 import pytest
 
-from notes_mcp.apple.core import ls
+from notes_mcp.apple.core import InvalidNameError, ls
 from notes_mcp.tools.create_note import create_note
 
 pytestmark = pytest.mark.usefixtures("skip_without_notes")
@@ -21,6 +21,15 @@ def test_create_note_creates_missing_subfolder_then_the_note(scratch_folder):
     assert note.folder_path == target
     listing = ls(target)
     assert [n.name for n in listing.notes] == ["auto-created-note"]
+
+
+def test_create_note_with_empty_name_changes_nothing(scratch_folder):
+    with pytest.raises(InvalidNameError):
+        create_note(f"{scratch_folder}/would-be-created", "", "content")
+
+    listing = ls(scratch_folder)
+    assert listing.folders == []
+    assert listing.notes == []
 
 
 def test_create_note_creates_multiple_missing_intermediate_folders(scratch_folder):
