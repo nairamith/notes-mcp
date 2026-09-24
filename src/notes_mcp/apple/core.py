@@ -74,11 +74,33 @@ def _load_jxa_script(op: str) -> str:
     return _COMMON_JS + "\n" + op_js
 
 
+_PATH_KEYS = ("folder_path", "parent_path", "destination_folder_path")
+
+
+def _normalize_path(path: str) -> str:
+    """Returns `path` in canonical form: no empty segments.
+
+    Folder lookups already skip empty segments, so "A/B/", "A//B" and
+    "/A/B" all name the same folder as "A/B" — this makes every path that
+    flows back to the caller use that one spelling too.
+
+    Args:
+        path: A `/`-delimited folder path.
+
+    Returns:
+        `path` with leading, trailing, and repeated `/` removed ("" for
+        the account root).
+    """
+    return "/".join(part for part in path.split("/") if part)
+
+
 def _run_jxa(command: dict) -> object:
     """Invokes the JXA script for `command["op"]` and returns its result.
 
     `command` is JSON-encoded and passed to the script via argv, never
-    interpolated into the script source (research.md §1).
+    interpolated into the script source (research.md §1). Any folder path
+    fields in it are normalized first (see `_normalize_path`), so scripts
+    only ever see — and echo back — canonical paths.
 
     Args:
         command: Must include an "op" key matching a file under
@@ -97,6 +119,10 @@ def _run_jxa(command: dict) -> object:
             based on the `error_type` the script itself reported.
     """
     op = command.get("op", "?")
+    command = {
+        key: _normalize_path(value) if key in _PATH_KEYS and isinstance(value, str) else value
+        for key, value in command.items()
+    }
     script = _load_jxa_script(op)
     start = time.monotonic()
     try:
@@ -347,6 +373,8 @@ def mv(
         result = _run_jxa(command)
         return Note(**result)
 
+    identifier = _normalize_path(identifier)
+    destination_folder_path = _normalize_path(destination_folder_path)
     prep = _run_jxa(
         {
             "op": "mv_folder_prepare",

@@ -42,6 +42,15 @@ LLM/user-influenced strings into these same functions.
 **Decision**: Folders are addressed by a `/`-delimited path of folder
 names (e.g. `"Personal/Groceries"`), rooted at a top-level folder.
 
+**Addendum — canonical paths (issue #11)**: Lookups have always skipped
+empty path segments, so `"A/B/"`, `"A//B"` and `"/A/B"` resolved to the
+same folder as `"A/B"` — but the raw input was echoed back into returned
+`folder_path`/`path` values, so one folder surfaced under several
+spellings. Every folder path is now normalized (empty segments dropped)
+before it reaches a script, in `_run_jxa` — the one place every operation
+passes through — plus `mv`'s folder branch, which builds its return value
+in Python. Callers can compare and join returned paths as plain strings.
+
 **Rationale**: `mkdir` (FR-003) already requires rejecting a duplicate
 name within the same parent, which means folder names are effectively
 unique within their parent — a path built from names is therefore

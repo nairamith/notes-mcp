@@ -171,3 +171,26 @@ class TestRmStub:
             with pytest.raises(NotImplementedYetError):
                 rm(kind="note", identifier="anything")
             mock_run.assert_not_called()
+
+
+class TestPathNormalizationUnit:
+    @pytest.mark.parametrize(
+        ("raw", "canonical"),
+        [("A/B", "A/B"), ("A/B/", "A/B"), ("A//B", "A/B"), ("/A/B", "A/B"), ("", ""), ("/", "")],
+    )
+    def test_normalize_path(self, raw, canonical):
+        assert core._normalize_path(raw) == canonical
+
+    def test_run_jxa_sends_canonical_folder_paths_to_the_script(self):
+        payload = json.dumps({"ok": True, "result": {"folders": [], "notes": []}})
+        with patch.object(core.subprocess, "run", return_value=_fake_proc(stdout=payload)) as mock_run:
+            core.ls("Personal//Groceries/")
+        sent = json.loads(mock_run.call_args.args[0][-1])
+        assert sent["folder_path"] == "Personal/Groceries"
+
+    def test_mv_folder_returns_canonical_path(self):
+        prep = {"needs_move": False, "src_id": "s", "dest_id": "d"}
+        with patch.object(core, "_run_jxa", return_value=prep):
+            folder = mv(kind="folder", identifier="A/Old/", destination_folder_path="A//")
+        assert folder.path == "A/Old"
+        assert folder.parent_path == "A"
