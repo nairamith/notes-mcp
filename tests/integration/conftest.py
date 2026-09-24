@@ -214,3 +214,17 @@ def seed_subfolder():
         return json.loads(_run_test_jxa(_SEED_SUBFOLDER, [folder_path, name]))
 
     return _seed
+
+
+@pytest.fixture
+def delete_top_level_folder():
+    """Factory fixture: delete_top_level_folder(name) recursively deletes
+    the *top-level* folder `name`, for a test that had to create one
+    outside its scratch folder (e.g. `mkdir("", ...)`). Only ever pass it
+    a uniquely-named folder the test itself created.
+    """
+
+    def _delete(name: str) -> None:
+        _run_test_jxa(_RECURSIVE_DELETE, [name])
+
+    return _delete

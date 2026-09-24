@@ -62,6 +62,20 @@ only: rejected as unnecessarily unfriendly for a filesystem-metaphor API
 where every sibling function (`ls`, `mkdir`) already speaks in terms of
 names/paths.
 
+**Addendum — what "top-level" means in Notes' scripting model (issue #8)**:
+`account.folders` does **not** list only an account's top-level folders:
+it lists every folder in the account, nested ones included, flattened.
+Treating it as the top level made a nested folder resolvable as if it
+were a top-level one (`ls("Groceries")` succeeded for
+`Personal/Groceries`), made `mkdir("", X)` refuse `X` if it existed
+anywhere, made a whole-account `grep` visit every nested folder twice
+(once under a bogus one-segment path), and could route
+`update_note`/`remove_note`'s archive step into a nested folder named
+`archive` when no top-level one exists. Every "folders at the account
+root" lookup (the first segment of any path, `mkdir("", ...)`'s duplicate
+check, whole-account `grep`) now keeps only folders whose `container` is
+the account itself (`topLevelFolders` in jxa_scripts/common.js).
+
 ## 3. Note addressing
 
 **Decision**: Notes are addressed by their stable Notes-assigned `id`, not

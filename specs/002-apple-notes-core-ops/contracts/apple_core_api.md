@@ -39,7 +39,9 @@ folders) can reject the name before changing anything.
 
 Lists the immediate notes and subfolders inside `folder_path`.
 
-- **Raises** `NotFoundError` if `folder_path` does not exist.
+- **Raises** `NotFoundError` if `folder_path` does not exist. A path's
+  first segment must name a *top-level* folder; a nested folder is only
+  reachable through its full path (research.md §2 addendum).
 - **Read-only**: never changes any Notes data (FR-008).
 - Returns an empty `FolderListing` (both lists empty) for an existing,
   empty folder — this is success, not an error.
@@ -56,6 +58,8 @@ searched; when omitted, the entire account is searched.
 - **Read-only**: never changes any Notes data (FR-008).
 - Returns an empty list when nothing matches — this is success, not an
   error.
+- A whole-account search (`folder_path` omitted) returns each matching
+  note exactly once, with its full `folder_path` from a top-level folder.
 
 ## `mkdir(parent_path: str, name: str) -> Folder`
 
@@ -64,7 +68,8 @@ Creates a new, empty folder named `name` directly under `parent_path`.
 - **Raises** `NotFoundError` if `parent_path` does not exist (FR-004; no
   automatic creation of missing intermediate parents).
 - **Raises** `AlreadyExistsError` if a folder named `name` already exists
-  under `parent_path` (FR-003).
+  under `parent_path` (FR-003). For `parent_path=""` only top-level
+  folders count — a nested folder with the same name elsewhere doesn't.
 - Returns the newly created `Folder`.
 
 ## `mv(kind: Literal["note", "folder"], identifier: str, destination_folder_path: str, new_name: str | None = None) -> Note | Folder`
