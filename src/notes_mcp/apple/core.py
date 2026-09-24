@@ -336,9 +336,9 @@ def mv(
 ) -> Note | Folder:
     """Moves and/or renames a note or folder.
 
-    Known platform limitation (research.md #10): after moving a folder to
-    a different parent, that destination folder's contents may become
-    unreadable via `ls()`/`grep()` in the same Notes.app session. This is
+    Known platform limitation (research.md #10): a folder moved to a
+    different parent can't be read by any script afterward, so `ls()`
+    and `grep()` skip it (and its contents) in its new location. This is
     a Notes.app scripting bug (the moved item's object reference breaks),
     not data loss — the folder and its contents are unaffected in the
     Notes app itself.

@@ -29,6 +29,8 @@ Wraps `apple.core.ls`.
   top-level folders (`parent_path: null`) and no notes — Notes keeps every
   note inside a folder (issue #13).
 - **Errors**: `NotFoundError` if `folder_path` does not exist.
+- Folders Notes still reports but that can't be read (deleted, or moved in
+  from another parent) are omitted rather than failing the call (issue #25).
 - Read-only (FR-008).
 
 ## `search_notes(pattern: str, folder_path: str | None = None) -> list[Note]`
@@ -41,6 +43,8 @@ Wraps `apple.core.grep`.
   Empty array (`{"result": []}`) when nothing matches — not an error.
 - **Errors**: `InvalidPatternError` if `pattern` is not a valid regular
   expression; `NotFoundError` if `folder_path` is given and doesn't exist.
+- Unreadable leftover folders are skipped, so one of them never makes a
+  scoped or whole-account search fail (issue #25).
 - Read-only (FR-008).
 
 ## `read_note(note_id: str) -> str`

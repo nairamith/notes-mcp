@@ -373,6 +373,35 @@ data move does succeed and is valuable; only the *subsequent automated
 inspection* of the destination is affected, which is a real but narrower
 limitation than "this doesn't work at all."
 
+**Addendum (issue #25)**: The same leftover also appears after a nested
+folder is *deleted* (`Notes.delete`): the folder stays in its parent's
+bulk `.name()`/`.id()` arrays but is gone from the account's flattened
+`account.folders` list, and dereferencing it throws -1728. A moved
+folder is likewise absent from that list, and unreadable even at the
+application level (`Notes.folders.byId`). Enumerating children one
+element at a time therefore made a single such leftover break `ls` of
+its parent, any `grep` scoped at or above it, and *every* whole-account
+`grep`.
+
+**Decision (issue #25)**: A child folder counts as present only if its id
+is in `account.folders`. `liveSubfolders` / `findLiveSubfolder`
+(jxa_scripts/common.js) filter every child enumeration and lookup this
+way: `ls` lists live children only (from the bulk name/id arrays, never
+dereferencing each child), `grep` recurses into live children only,
+`resolveFolder` resolves nested path segments against live children,
+and `mkdir`'s duplicate check ignores leftovers (so a deleted folder's
+name can be reused, and the path then resolves to the new folder). A
+folder moved to a different parent is consequently omitted from its
+destination's listing and search: it can't be read, and omitting it
+beats failing the whole call. The account-wide id list is fetched once
+per script, not per folder.
+
+**Alternatives considered (issue #25)**: Skipping a child only if
+touching it throws: rejected — a deleted child is still readable by id
+through its parent, so it would be listed as if it existed. Surfacing
+leftovers in `ls` by bulk name: rejected — they'd be paths that no later
+call can use.
+
 ## 11. Stable object references: by id, never by index (issues #6, #14)
 
 **Finding**: A JXA bracket-index specifier (`collection[idx]`) is not a
@@ -406,4 +435,5 @@ entirely, where nothing fails but the wrong note is returned.
 
 All unknowns resolved. No remaining `NEEDS CLARIFICATION` markers. One
 platform limitation discovered during implementation (§10), documented
-and scoped rather than blocking. Ready for Phase 1 design.
+and scoped rather than blocking; since issue #25, it no longer makes the
+destination folder unlistable. Ready for Phase 1 design.

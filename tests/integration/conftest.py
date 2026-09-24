@@ -113,6 +113,16 @@ function run(argv) {
 }
 """
 
+_DELETE_SUBFOLDER = _FIXTURE_HELPERS + """
+function run(argv) {
+  var Notes = Application("Notes");
+  var acct = Notes.accounts[0];
+  var current = resolveFixtureFolder(acct, argv[0] + "/" + argv[1]);
+  Notes.delete(current);
+  return "ok";
+}
+"""
+
 
 def _run_test_jxa(script: str, args: list[str]) -> str:
     """Invoke a fixture-only JXA script (never one of the module-under-test's
@@ -226,5 +236,19 @@ def delete_top_level_folder():
 
     def _delete(name: str) -> None:
         _run_test_jxa(_RECURSIVE_DELETE, [name])
+
+    return _delete
+
+
+@pytest.fixture
+def delete_subfolder():
+    """Factory fixture: delete_subfolder(folder_path, name) deletes that
+    nested folder directly with Notes' own delete (bypassing rm). This
+    leaves the deleted folder behind in its parent's bulk folder name/id
+    arrays — the state issue #25's fix must tolerate.
+    """
+
+    def _delete(folder_path: str, name: str) -> None:
+        _run_test_jxa(_DELETE_SUBFOLDER, [folder_path, name])
 
     return _delete

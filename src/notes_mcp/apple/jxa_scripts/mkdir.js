@@ -2,7 +2,7 @@ function handle(Notes, cmd) {
   var acct = Notes.accounts[0];
   var isRoot = cmd.parent_path === "";
   var parent = isRoot ? acct : resolveFolder(acct, cmd.parent_path);
-  var duplicate = isRoot ? findTopLevelFolder(acct, cmd.name) : findByName(parent.folders, cmd.name);
+  var duplicate = isRoot ? findTopLevelFolder(acct, cmd.name) : findLiveSubfolder(parent, cmd.name, liveFolderIds(acct));
   if (duplicate) {
     throwCustom(
       "AlreadyExistsError",

@@ -10,5 +10,5 @@ function handle(Notes, cmd) {
     return { folders: folders, notes: [] };
   }
   var folder = resolveFolder(acct, cmd.folder_path);
-  return listImmediate(folder, cmd.folder_path);
+  return listImmediate(acct, folder, cmd.folder_path);
 }

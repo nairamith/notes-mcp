@@ -145,6 +145,12 @@ preserving everything already there.
 - Every call logs its function name, outcome (success/error type), and
   duration via stdlib `logging`, per the constitution's Observability
   principle.
+- A folder's leftover children — nested folders deleted in Notes, or
+  folders moved in from a different parent, which Notes still reports
+  under their parent but which can't be read (research.md §10 addendum)
+  — are never listed by `ls`, searched by `grep`, resolved as part of a
+  path, or counted as duplicates by `mkdir` (issue #25). One such
+  leftover never makes its parent, or a whole-account `grep`, fail.
 - No function ever interpolates its string arguments directly into an
   AppleScript/JXA script source — arguments are passed via the script's
   `argv`, eliminating script-injection risk from note/folder names
