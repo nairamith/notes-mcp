@@ -9,7 +9,7 @@ The server talks to Notes.app via JavaScript for Automation (JXA); your notes ne
 
 ## Features
 
-- `list_folder_contents(folder_path)` — the notes and subfolders directly inside a folder
+- `list_folder_contents(folder_path)` — the notes and subfolders directly inside a folder; pass `""` to list the top-level folders
 - `search_notes(pattern, folder_path=None)` — notes whose content matches a regular expression, optionally scoped to a folder
 - `read_note(note_id)` — a note's content
 - `create_note(folder_path, name, content)` — create a note, creating `folder_path` (and any missing parent folders) if needed; if a note named `name` already exists there, `content` is appended to it instead, exactly like `update_note`

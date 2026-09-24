@@ -6,6 +6,8 @@ Automatically skipped when Notes.app isn't scriptable in this environment
 (not macOS, or Automation permission not granted).
 """
 
+import uuid
+
 import pytest
 
 from notes_mcp.apple.core import (
@@ -40,6 +42,26 @@ class TestLsIntegration:
         assert [f.name for f in listing.folders] == ["a-subfolder"]
         assert [n.name for n in listing.notes] == ["a-note"]
 
+    def test_ls_does_not_resolve_a_nested_folder_as_top_level(self, scratch_folder, seed_subfolder):
+        nested = f"nested-{uuid.uuid4().hex[:8]}"
+        seed_subfolder(scratch_folder, nested)
+
+        with pytest.raises(NotFoundError):
+            ls(nested)
+
+    @pytest.mark.parametrize("root", ["", "/"])
+    def test_ls_of_account_root_lists_top_level_folders_only(self, scratch_folder, seed_subfolder, root):
+        seed_subfolder(scratch_folder, "nested-only")
+
+        listing = ls(root)
+
+        by_name = {f.name: f for f in listing.folders}
+        assert by_name[scratch_folder].path == scratch_folder
+        assert by_name[scratch_folder].parent_path is None
+        assert "nested-only" not in by_name
+        assert all(f.parent_path is None for f in listing.folders)
+        assert listing.notes == []
+
     def test_ls_raises_not_found_for_missing_folder(self, scratch_folder):
         with pytest.raises(NotFoundError):
             ls(f"{scratch_folder}/does-not-exist")
@@ -65,6 +87,15 @@ class TestGrepIntegration:
 
         assert [n.name for n in results] == ["note-a"]
 
+    def test_unscoped_grep_returns_nested_note_once_with_full_path(self, scratch_folder, seed_note, seed_subfolder):
+        marker = f"marker-{uuid.uuid4().hex}"
+        seed_subfolder(scratch_folder, "child")
+        seed_note(f"{scratch_folder}/child", "nested-note", marker)
+
+        results = grep(marker)
+
+        assert [(n.name, n.folder_path) for n in results] == [("nested-note", f"{scratch_folder}/child")]
+
     def test_grep_returns_empty_for_no_match(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "note-a", "nothing relevant here")
 
@@ -84,6 +115,20 @@ class TestMkdirIntegration:
         mkdir(scratch_folder, "dup")
         with pytest.raises(AlreadyExistsError):
             mkdir(scratch_folder, "dup")
+
+    def test_mkdir_at_root_ignores_same_named_nested_folder(
+        self, scratch_folder, seed_subfolder, delete_top_level_folder
+    ):
+        name = f"_notes_mcp_test_nested_{uuid.uuid4().hex[:12]}"
+        seed_subfolder(scratch_folder, name)
+        try:
+            folder = mkdir("", name)
+
+            assert folder.path == name
+            assert folder.parent_path is None
+            ls(name)
+        finally:
+            delete_top_level_folder(name)
 
     def test_mkdir_missing_parent_raises_not_found(self, scratch_folder):
         with pytest.raises(NotFoundError):
