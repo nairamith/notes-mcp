@@ -97,7 +97,9 @@ same call; if omitted, its current name is kept.
   `folder_path`/`path` and, if changed, `name`).
 - **Raises** `InvalidNameError` for `kind="note"` when `new_name` is
   given but fails `validate_note_name` — checked before anything moves.
-- Never destroys or duplicates content (FR-005).
+- Never destroys or duplicates content (FR-005). Renaming a note keeps
+  its content character for character, whitespace included (issue #27),
+  and stores `new_name` verbatim (`$&`, `$1`, ... are not expanded).
 
 ## `rm(kind: Literal["note", "folder"], identifier: str) -> NoReturn`
 
@@ -140,6 +142,10 @@ preserving everything already there.
   write alike, so a padded `name` finds the note too (issue #26).
 - Line breaks inside `text` are preserved exactly: `cat` returns the
   same lines that were written (research.md §6a addendum).
+- Spaces and tabs are preserved exactly too — indentation, runs of
+  spaces, trailing spaces — both in `text` and in the content already in
+  the note, including whitespace typed in the Notes app (issue #27,
+  research.md §6a second addendum).
 
 ## Cross-cutting guarantees (all functions)
 

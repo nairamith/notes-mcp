@@ -78,6 +78,8 @@ wants that folder to exist, not a `NotFoundError`.
 - Leading/trailing whitespace in `name` is ignored — Notes trims it from
   titles — so a padded `name` finds (and appends to) the existing note
   rather than creating a duplicate (issue #26).
+- `content` round-trips exactly through `read_note` — line breaks, spaces,
+  and tabs alike (issues #7, #27).
 
 ## `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note`
 
@@ -114,7 +116,9 @@ step.
   (FR-005, FR-013): append mode adds newline-separated content (inherited
   from `append`'s contract, research.md §6a in feature 002); replace mode
   preserves the original note's content unchanged, just relocated to
-  `archive`, rather than editing or deleting it.
+  `archive`, rather than editing or deleting it. Appending also keeps the
+  note's existing spaces and tabs intact, including indentation typed in
+  the Notes app (issue #27).
 
 **Note on `create_note` vs. `update_note`**: in `update_note`'s default
 (`overwrite=False`) mode, both call the same `append()` function, which
