@@ -151,22 +151,6 @@ class TestCatIntegration:
 
 
 class TestAppendIntegration:
-    def test_append_creates_note_when_missing(self, scratch_folder):
-        note = append(scratch_folder, "shopping-list", "milk")
-
-        assert note.name == "shopping-list"
-        assert cat(note.id) == "milk"
-        listing = ls(scratch_folder)
-        assert [n.name for n in listing.notes].count("shopping-list") == 1
-
-    def test_append_preserves_existing_content(self, scratch_folder):
-        note = append(scratch_folder, "shopping-list", "milk")
-        append(scratch_folder, "shopping-list", "eggs")
-
-        assert cat(note.id) == "milk\neggs"
-        listing = ls(scratch_folder)
-        assert [n.name for n in listing.notes].count("shopping-list") == 1
-
     def test_append_preserves_line_breaks_in_new_note(self, scratch_folder):
         text = "line one\nline two\n\nafter a blank line"
 
@@ -186,6 +170,22 @@ class TestAppendIntegration:
         note = append(scratch_folder, "html-chars", text)
 
         assert cat(note.id) == text
+
+    def test_append_creates_note_when_missing(self, scratch_folder):
+        note = append(scratch_folder, "shopping-list", "milk")
+
+        assert note.name == "shopping-list"
+        assert cat(note.id) == "milk"
+        listing = ls(scratch_folder)
+        assert [n.name for n in listing.notes].count("shopping-list") == 1
+
+    def test_append_preserves_existing_content(self, scratch_folder):
+        note = append(scratch_folder, "shopping-list", "milk")
+        append(scratch_folder, "shopping-list", "eggs")
+
+        assert cat(note.id) == "milk\neggs"
+        listing = ls(scratch_folder)
+        assert [n.name for n in listing.notes].count("shopping-list") == 1
 
     def test_append_raises_ambiguous_match_for_duplicate_names(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "dup-name", "first")
