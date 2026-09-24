@@ -24,6 +24,7 @@ from .exceptions import (
     AmbiguousMatchError,
     AppleNotesError,
     AutomationPermissionError,
+    InvalidNameError,
     InvalidPatternError,
     NotFoundError,
     NotImplementedYetError,
@@ -37,6 +38,7 @@ __all__ = [
     "AutomationPermissionError",
     "Folder",
     "FolderListing",
+    "InvalidNameError",
     "InvalidPatternError",
     "Note",
     "NotFoundError",
@@ -48,6 +50,7 @@ __all__ = [
     "mkdir",
     "mv",
     "rm",
+    "validate_note_name",
 ]
 
 logger = logging.getLogger(__name__)
@@ -156,6 +159,28 @@ def _plaintext_to_content(plaintext: str) -> str:
     if content.endswith("\n"):
         content = content[:-1]
     return content
+
+
+def validate_note_name(name: str) -> None:
+    """Rejects a name that can't be a note's title.
+
+    Notes derives a note's title from the first line of its text, so an
+    empty or whitespace-only name makes the first line of the content the
+    title instead (silently removing it from the content), and a name
+    with a line break has everything after the break end up in the
+    content.
+
+    Args:
+        name: The proposed note name.
+
+    Raises:
+        InvalidNameError: `name` is empty, whitespace-only, or contains a
+            line break.
+    """
+    if not name.strip():
+        raise InvalidNameError("Note name must not be empty or whitespace-only")
+    if "\n" in name or "\r" in name:
+        raise InvalidNameError(f"Note name must be a single line, got {name!r}")
 
 
 def ls(folder_path: str) -> FolderListing:
@@ -306,8 +331,13 @@ def mv(
             `destination_folder_path`, does not exist.
         AlreadyExistsError: Renaming a folder to a name that already
             exists under `destination_folder_path`.
+        InvalidNameError: `kind="note"` and `new_name` is given but empty,
+            whitespace-only, or multi-line (see `validate_note_name`).
+            Checked before anything is moved.
     """
     if kind == "note":
+        if new_name is not None:
+            validate_note_name(new_name)
         command = {
             "op": "mv_note",
             "identifier": identifier,
@@ -395,6 +425,9 @@ def append(folder_path: str, name: str, text: str) -> Note:
         NotFoundError: `folder_path` does not exist.
         AmbiguousMatchError: More than one note already named `name`
             exists in `folder_path`.
+        InvalidNameError: `name` is empty, whitespace-only, or multi-line
+            (see `validate_note_name`). Checked before anything is written.
     """
+    validate_note_name(name)
     result = _run_jxa({"op": "append", "folder_path": folder_path, "name": name, "text": text})
     return Note(**result)

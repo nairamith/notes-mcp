@@ -43,6 +43,9 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
     Raises:
         AmbiguousMatchError: A note named `name` already exists more than
             once in `folder_path`.
+        InvalidNameError: `name` is empty, whitespace-only, or multi-line.
+            Checked before any folder or note is created.
     """
+    core.validate_note_name(name)
     _ensure_folder_exists(folder_path)
     return core.append(folder_path, name, content)

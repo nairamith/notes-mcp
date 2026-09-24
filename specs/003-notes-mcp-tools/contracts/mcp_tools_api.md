@@ -64,8 +64,10 @@ wants that folder to exist, not a `NotFoundError`.
   `Note` directly: `{"id", "name", "folder_path"}`.
 - **Errors**: `AmbiguousMatchError` if a note named `name` already exists
   more than once in `folder_path` (inherited from `append`'s contract —
-  see note below). `folder_path` not existing is no longer an error case
-  (see above).
+  see note below); `InvalidNameError` if `name` is empty,
+  whitespace-only, or multi-line — checked before any folder or note is
+  created (issue #10). `folder_path` not existing is no longer an error
+  case (see above).
 
 ## `update_note(folder_path: str, name: str, content: str, overwrite: bool = False) -> Note`
 
@@ -94,7 +96,8 @@ step.
 - **Errors**: `NotFoundError` if `folder_path` doesn't exist;
   `AmbiguousMatchError` if a note named `name` already exists more than
   once in `folder_path` — checked before any change is made, regardless
-  of `overwrite`.
+  of `overwrite`; `InvalidNameError` if `name` is empty, whitespace-only,
+  or multi-line — also checked before any change (issue #10).
 - Never overwrites or removes existing content in place, in either mode
   (FR-005, FR-013): append mode adds newline-separated content (inherited
   from `append`'s contract, research.md §6a in feature 002); replace mode

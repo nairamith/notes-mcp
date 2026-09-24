@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from notes_mcp.apple.core import AlreadyExistsError, AmbiguousMatchError, Note
+from notes_mcp.apple.core import AlreadyExistsError, AmbiguousMatchError, InvalidNameError, Note
 from notes_mcp.tools.create_note import create_note
 
 
@@ -73,3 +73,14 @@ def test_create_note_propagates_ambiguous_match_error():
     ):
         with pytest.raises(AmbiguousMatchError):
             create_note("F", "dup-name", "content")
+
+
+def test_create_note_rejects_empty_name_before_creating_any_folder():
+    with (
+        patch("notes_mcp.tools.create_note.core.append") as mock_append,
+        patch("notes_mcp.tools.create_note.core.mkdir") as mock_mkdir,
+    ):
+        with pytest.raises(InvalidNameError):
+            create_note("New/Folder", "", "content")
+    mock_mkdir.assert_not_called()
+    mock_append.assert_not_called()

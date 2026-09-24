@@ -10,6 +10,7 @@ from notes_mcp.apple.core import (
     AlreadyExistsError,
     AmbiguousMatchError,
     FolderListing,
+    InvalidNameError,
     Note,
     NotFoundError,
 )
@@ -135,3 +136,17 @@ class TestOverwriteModeAmbiguousMatches:
         mock_mkdir.assert_not_called()
         mock_mv.assert_not_called()
         mock_append.assert_called_once_with("F", "n", "content")
+
+
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_update_note_rejects_empty_name_before_any_change(overwrite):
+    with (
+        patch("notes_mcp.tools.update_note.core.ls") as mock_ls,
+        patch("notes_mcp.tools.update_note.core.mv") as mock_mv,
+        patch("notes_mcp.tools.update_note.core.append") as mock_append,
+    ):
+        with pytest.raises(InvalidNameError):
+            update_note("Folder", "", "content", overwrite=overwrite)
+    mock_ls.assert_not_called()
+    mock_mv.assert_not_called()
+    mock_append.assert_not_called()

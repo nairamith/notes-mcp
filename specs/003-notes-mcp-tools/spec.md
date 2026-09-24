@@ -226,7 +226,11 @@ original content intact — is now there instead of gone.
   backend capability's create-if-missing behavior. If the given folder
   (or any folder along its path) doesn't exist yet, the tool MUST create
   it automatically, composing the existing `mkdir` backend capability,
-  rather than failing.
+  rather than failing. A note name that can't be a title — empty,
+  whitespace-only, or multi-line — MUST be rejected with a clear error
+  before any folder or note is created, for this tool and the
+  note-update tool alike (amendment, issue #10: an empty name otherwise
+  silently turned the content's first line into the title).
 - **FR-005**: The system MUST provide an MCP tool that, by default, adds
   content to an existing note — or creates it first if no note by that
   name exists yet in the given folder — backed by the existing `append`
