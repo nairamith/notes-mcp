@@ -30,6 +30,10 @@ def _ensure_folder_exists(folder_path: str) -> None:
 def create_note(folder_path: str, name: str, content: str) -> Note:
     """Creates a new note in a folder, creating the folder first if needed.
 
+    If a note named `name` already exists in `folder_path`, no new note
+    is created: `content` is appended to that note instead, exactly as
+    `update_note` does by default, and that note is returned.
+
     Args:
         folder_path: `/`-delimited path to the folder the note is created
             in. Ensured to exist (creating it, and any missing
@@ -38,7 +42,8 @@ def create_note(folder_path: str, name: str, content: str) -> Note:
         content: The note's initial content.
 
     Returns:
-        The created Note.
+        The created Note — or, if one named `name` already existed, that
+        existing Note (same id).
 
     Raises:
         AmbiguousMatchError: A note named `name` already exists more than

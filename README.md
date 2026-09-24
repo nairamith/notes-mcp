@@ -12,9 +12,9 @@ The server talks to Notes.app via JavaScript for Automation (JXA); your notes ne
 - `list_folder_contents(folder_path)` — the notes and subfolders directly inside a folder
 - `search_notes(pattern, folder_path=None)` — notes whose content matches a regular expression, optionally scoped to a folder
 - `read_note(note_id)` — a note's content
-- `create_note(folder_path, name, content)` — create a new note
+- `create_note(folder_path, name, content)` — create a note, creating `folder_path` (and any missing parent folders) if needed; if a note named `name` already exists there, `content` is appended to it instead, exactly like `update_note`
 - `update_note(folder_path, name, content, overwrite=False)` — append to an existing note (creating it if missing), or, with `overwrite=True`, archive the existing note and create a fresh replacement
-- `move_note(note_id, destination_folder_path, new_name=None)` — move a note to a different folder, optionally renaming it in the same call
+- `move_note(note_id, destination_folder_path, new_name=None)` — move a note to a different folder, optionally renaming it in the same call; unlike `create_note`, the destination folder must already exist
 - `remove_note(note_id)` — remove a note by archiving it (never a permanent delete)
 
 ## Requirements

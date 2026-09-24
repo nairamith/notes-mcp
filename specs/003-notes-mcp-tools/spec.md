@@ -226,7 +226,11 @@ original content intact — is now there instead of gone.
   backend capability's create-if-missing behavior. If the given folder
   (or any folder along its path) doesn't exist yet, the tool MUST create
   it automatically, composing the existing `mkdir` backend capability,
-  rather than failing.
+  rather than failing. If a note by the given name already exists in
+  that folder, the content is appended to it rather than a second note
+  being created (the same underlying `append` behavior as the note-update
+  tool's default mode — see contracts/mcp_tools_api.md); the tool's
+  user-facing description and the README MUST say so (issue #12).
 - **FR-005**: The system MUST provide an MCP tool that, by default, adds
   content to an existing note — or creates it first if no note by that
   name exists yet in the given folder — backed by the existing `append`
