@@ -20,3 +20,11 @@ def test_list_folder_contents_propagates_not_found_error():
     with patch("notes_mcp.tools.list_folder_contents.core.ls", side_effect=NotFoundError("nope")):
         with pytest.raises(NotFoundError):
             list_folder_contents("does/not/exist")
+
+
+def test_list_folder_contents_passes_empty_path_through_for_account_root():
+    expected = FolderListing(folders=[], notes=[])
+    with patch("notes_mcp.tools.list_folder_contents.core.ls", return_value=expected) as mock_ls:
+        result = list_folder_contents("")
+    mock_ls.assert_called_once_with("")
+    assert result is expected

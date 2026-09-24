@@ -214,7 +214,10 @@ original content intact — is now there instead of gone.
 - **FR-001**: The system MUST provide a new, distinctly-named MCP tool
   (not the existing placeholder `list_folders` tool) that lists the
   notes and subfolders directly inside a given folder, backed by the
-  existing `ls` backend capability — not placeholder data.
+  existing `ls` backend capability — not placeholder data. An empty
+  folder path lists the account root — its top-level folders — so a
+  caller can discover the folder tree without already knowing a folder
+  name (amendment, issue #13).
 - **FR-002**: The system MUST provide an MCP tool that searches note
   content for a pattern and returns matching notes, backed by the
   existing `grep` backend capability, across the whole account or scoped
