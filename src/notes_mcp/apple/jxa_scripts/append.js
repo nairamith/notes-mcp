@@ -13,9 +13,9 @@ function handle(Notes, cmd) {
   if (matchCount === 1) {
     targetNote = findByName(folder.notes, cmd.name);
     var existingBody = targetNote.body();
-    targetNote.body = existingBody + "<div>" + escapeHtml(cmd.text) + "</div>";
+    targetNote.body = existingBody + textToHtml(cmd.text);
   } else {
-    targetNote = Notes.Note({ name: escapeHtml(cmd.name), body: escapeHtml(cmd.text) });
+    targetNote = Notes.Note({ name: escapeHtml(cmd.name), body: textToHtml(cmd.text) });
     folder.notes.push(targetNote);
   }
   return { id: targetNote.id(), name: targetNote.name(), folder_path: cmd.folder_path };

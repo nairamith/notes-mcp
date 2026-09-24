@@ -11,6 +11,17 @@ function escapeHtml(text) {
     .replace(/>/g, "&gt;");
 }
 
+// Converts plain text to Notes body HTML, one <div> per line. Notes'
+// body is HTML, so raw "\n" characters in it collapse to whitespace;
+// Notes itself stores each line as its own <div>, with <div><br></div>
+// for a blank line.
+function textToHtml(text) {
+  return String(text)
+    .split("\n")
+    .map(function (line) { return "<div>" + (line.length ? escapeHtml(line) : "<br>") + "</div>"; })
+    .join("");
+}
+
 function throwCustom(errorType, message) {
   throw { customType: errorType, message: message };
 }

@@ -167,6 +167,26 @@ class TestAppendIntegration:
         listing = ls(scratch_folder)
         assert [n.name for n in listing.notes].count("shopping-list") == 1
 
+    def test_append_preserves_line_breaks_in_new_note(self, scratch_folder):
+        text = "line one\nline two\n\nafter a blank line"
+
+        note = append(scratch_folder, "multi-line", text)
+
+        assert cat(note.id) == text
+
+    def test_append_preserves_line_breaks_when_appending(self, scratch_folder):
+        note = append(scratch_folder, "multi-line", "first\nsecond")
+        append(scratch_folder, "multi-line", "third\nfourth")
+
+        assert cat(note.id) == "first\nsecond\nthird\nfourth"
+
+    def test_append_escapes_html_in_each_line(self, scratch_folder):
+        text = "a & b\n<not a tag>"
+
+        note = append(scratch_folder, "html-chars", text)
+
+        assert cat(note.id) == text
+
     def test_append_raises_ambiguous_match_for_duplicate_names(self, scratch_folder, seed_note):
         seed_note(scratch_folder, "dup-name", "first")
         seed_note(scratch_folder, "dup-name", "second")
